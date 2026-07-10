@@ -7,6 +7,10 @@ campus engine
 It reproduces the scoring model from `In_Demand.xlsx` exactly — all data and
 formula logic are embedded in the file; no backend or external calls.
 
+- **Report canvas:** Power BI-style layout — slicer bar, KPI cards, cross-filtering
+  visuals (avg score by zone, CG priority donut, top 10 bars) and the ranking
+  table as a detail visual. Clicking a bar or donut segment filters the page;
+  clicking it again clears.
 - **Toggles:** Engagement bonus (default on) and Diversity bonus (default off),
   matching the workbook's Dashboard-sheet toggles.
 - **Filters:** Zone, CG Priority, and free-text search.

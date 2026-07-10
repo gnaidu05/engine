@@ -6,72 +6,86 @@
 <title>College Priority Rankings — Dashboard</title>
 <style>
   :root {
-    --surface-0: #f4f4f2;
-    --surface-1: #fcfcfb;
-    --border: #e3e2de;
-    --border-strong: #c9c8c2;
-    --text-primary: #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted: #7a7974;
+    --canvas: #f3f2f1;
+    --surface-0: #f8f7f6;
+    --surface-1: #ffffff;
+    --border: #e8e6e3;
+    --border-strong: #c8c6c4;
+    --text-primary: #252423;
+    --text-secondary: #605e5c;
+    --text-muted: #8a8886;
     --accent: #2a78d6;
-    --accent-soft: #cde2fb;
+    --accent-soft: #deecf9;
     --bar: #2a78d6;
-    --bar-track: #ecebe7;
-    --row-hover: #f0f4fa;
-    --row-open: #e8f0fb;
+    --bar-track: #edebe9;
+    --row-hover: #f3f7fc;
+    --row-open: #e8f1fb;
+    --cat-p1: #2a78d6;
+    --cat-p2: #1baf7a;
+    --cat-na: #8a8886;
     --chip-p1-bg: #dcebfb; --chip-p1-fg: #14477e;
-    --chip-p2-bg: #e7e6f7; --chip-p2-fg: #3a3080;
-    --chip-na-bg: #ececea; --chip-na-fg: #52514e;
+    --chip-p2-bg: #d3f3e6; --chip-p2-fg: #0b5c3f;
+    --chip-na-bg: #edebe9; --chip-na-fg: #605e5c;
+    --shadow: 0 1.6px 3.6px rgba(0,0,0,.13), 0 .3px .9px rgba(0,0,0,.11);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --surface-0: #121211;
-      --surface-1: #1a1a19;
-      --border: #33322f;
-      --border-strong: #4a4945;
+      --canvas: #1b1a19;
+      --surface-0: #201f1e;
+      --surface-1: #252423;
+      --border: #3b3a39;
+      --border-strong: #605e5c;
       --text-primary: #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted: #8f8e86;
+      --text-secondary: #c8c6c4;
+      --text-muted: #979593;
       --accent: #3987e5;
       --accent-soft: #1c3a5e;
       --bar: #3987e5;
-      --bar-track: #2a2a28;
-      --row-hover: #20242b;
-      --row-open: #1d2a3c;
+      --bar-track: #3b3a39;
+      --row-hover: #2d3138;
+      --row-open: #253345;
+      --cat-p1: #3987e5;
+      --cat-p2: #199e70;
+      --cat-na: #979593;
       --chip-p1-bg: #1c3a5e; --chip-p1-fg: #9ec5f4;
-      --chip-p2-bg: #2d2a52; --chip-p2-fg: #b6b0f0;
-      --chip-na-bg: #2a2a28; --chip-na-fg: #c3c2b7;
+      --chip-p2-bg: #0e3b2a; --chip-p2-fg: #7fd9b4;
+      --chip-na-bg: #3b3a39; --chip-na-fg: #c8c6c4;
+      --shadow: 0 1.6px 3.6px rgba(0,0,0,.45), 0 .3px .9px rgba(0,0,0,.35);
     }
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--surface-0); color: var(--text-primary);
-    font: 14px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; background: var(--canvas); color: var(--text-primary);
+    font: 13px/1.45 "Segoe UI", -apple-system, Roboto, Helvetica, Arial, sans-serif;
   }
-  header { padding: 20px 24px 0; max-width: 1280px; margin: 0 auto; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .sub { color: var(--text-secondary); margin: 0 0 16px; font-size: 13px; }
-  .panel {
-    max-width: 1280px; margin: 0 auto 24px; background: var(--surface-1);
-    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  .topbar {
+    background: var(--surface-1); border-bottom: 1px solid var(--border);
+    padding: 10px 24px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
   }
-  .controls {
-    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
-    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .topbar .sub { color: var(--text-muted); font-size: 12px; }
+  .canvas { max-width: 1500px; margin: 0 auto; padding: 16px 20px 8px; display: grid; gap: 14px; }
+  .visual {
+    background: var(--surface-1); border-radius: 8px; box-shadow: var(--shadow);
+    padding: 12px 16px; min-width: 0;
   }
-  .control { display: flex; align-items: center; gap: 8px; }
-  .control label { color: var(--text-secondary); font-size: 13px; white-space: nowrap; }
+  .vtitle { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
+  .vtitle .vhint { font-weight: 400; color: var(--text-muted); }
+  /* ---- slicer row ---- */
+  .slicers { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; }
+  .control { display: flex; align-items: center; gap: 7px; }
+  .control label { color: var(--text-secondary); font-size: 12.5px; white-space: nowrap; }
   select, input[type="search"] {
     background: var(--surface-1); color: var(--text-primary);
-    border: 1px solid var(--border-strong); border-radius: 6px;
-    padding: 5px 8px; font-size: 13px;
+    border: 1px solid var(--border-strong); border-radius: 4px;
+    padding: 5px 8px; font-size: 12.5px;
   }
-  input[type="search"] { width: 240px; }
-  .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  input[type="search"] { width: 220px; }
+  .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 12.5px; }
   .switch input { position: absolute; opacity: 0; }
   .track {
     width: 34px; height: 19px; border-radius: 10px; background: var(--bar-track);
-    border: 1px solid var(--border-strong); position: relative; transition: background .15s;
+    border: 1px solid var(--border-strong); position: relative; transition: background .15s; flex: none;
   }
   .switch input:checked + .track { background: var(--accent); border-color: var(--accent); }
   .knob {
@@ -81,14 +95,49 @@
   }
   .switch input:checked + .track .knob { left: 16px; }
   .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .count { margin-left: auto; color: var(--text-muted); font-size: 13px; }
+  .count { margin-left: auto; color: var(--text-muted); font-size: 12px; }
+  .btn {
+    border: 1px solid var(--border-strong); border-radius: 4px; padding: 5px 12px;
+    background: var(--surface-1); color: var(--text-primary); font-size: 12.5px; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.danger { color: #b3261e; border-color: #b3261e; background: transparent; }
+  @media (prefers-color-scheme: dark) { .btn.danger { color: #e66767; border-color: #e66767; } }
+  .clearlink { font-size: 12px; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; }
+  /* ---- KPI row ---- */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .kpi .klabel { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .kpi .kvalue { font-size: 30px; font-weight: 600; line-height: 1.25; font-variant-numeric: tabular-nums; }
+  .kpi .ksub { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* ---- charts row ---- */
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+  .chartbox svg { width: 100%; height: auto; display: block; }
+  .chartbox text { font-family: inherit; }
+  .mark { cursor: pointer; }
+  .mark.dim { opacity: .35; }
+  .legend { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+  .legend .li { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+  .legend .li.dim { opacity: .4; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .legend .lval { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+  .donutwrap { display: flex; align-items: center; gap: 16px; }
+  .donutwrap svg { width: 170px; flex: none; }
+  .legend { flex: 1; min-width: 0; }
+  #tooltip {
+    position: fixed; z-index: 50; pointer-events: none; display: none;
+    background: var(--text-primary); color: var(--surface-1);
+    padding: 6px 9px; border-radius: 4px; font-size: 12px; max-width: 300px;
+    box-shadow: var(--shadow);
+  }
+  #tooltip b { font-variant-numeric: tabular-nums; }
+  /* ---- table visual ---- */
   .tablewrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; min-width: 980px; }
-  th, td { padding: 7px 10px; text-align: left; white-space: nowrap; }
+  th, td { padding: 6px 10px; text-align: left; white-space: nowrap; font-size: 12.5px; }
   td.college { white-space: normal; min-width: 260px; }
   th {
     position: sticky; top: 0; background: var(--surface-1); z-index: 1;
-    color: var(--text-secondary); font-weight: 600; font-size: 12px;
+    color: var(--text-secondary); font-weight: 600; font-size: 11.5px;
     border-bottom: 1px solid var(--border-strong); cursor: pointer; user-select: none;
   }
   th .dir { color: var(--accent); }
@@ -96,49 +145,42 @@
   tbody tr.data { border-top: 1px solid var(--border); cursor: pointer; }
   tbody tr.data:hover { background: var(--row-hover); }
   tbody tr.data.open { background: var(--row-open); }
-  .chip {
-    display: inline-block; padding: 1px 8px; border-radius: 9px;
-    font-size: 12px; font-weight: 600;
-  }
+  .scorebar { display: inline-block; vertical-align: middle; width: 74px; height: 5px; border-radius: 3px; background: var(--bar-track); margin-left: 8px; }
+  .scorebar i { display: block; height: 5px; border-radius: 3px; background: var(--bar); }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 11.5px; font-weight: 600; }
   .chip.P1 { background: var(--chip-p1-bg); color: var(--chip-p1-fg); }
   .chip.P2 { background: var(--chip-p2-bg); color: var(--chip-p2-fg); }
   .chip.NA { background: var(--chip-na-bg); color: var(--chip-na-fg); }
+  .chip.added { background: var(--accent-soft); color: var(--accent); margin-left: 6px; }
   tr.detail td { padding: 0; }
   .detail-inner {
     padding: 16px; background: var(--surface-1); border-top: 1px dashed var(--border-strong);
     display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;
   }
   .card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-  .card h3 { margin: 0 0 8px; font-size: 13px; color: var(--text-secondary); font-weight: 600; }
-  .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 2px 0; }
+  .card h3 { margin: 0 0 8px; font-size: 12.5px; color: var(--text-secondary); font-weight: 600; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; padding: 2px 0; }
   .kv .k { color: var(--text-muted); }
   .kv .v { font-variant-numeric: tabular-nums; text-align: right; }
   .kv.total { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; font-weight: 600; }
   .comp { margin: 6px 0; }
-  .comp .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); }
+  .comp .lbl { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-secondary); }
   .comp .lbl b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
   .comp .trackbar { height: 6px; border-radius: 4px; background: var(--bar-track); margin-top: 3px; }
   .comp .fill { height: 6px; border-radius: 4px; background: var(--bar); }
-  .note { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .note { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
   .off { opacity: .55; }
-  footer { max-width: 1280px; margin: 0 auto; padding: 0 24px 28px; color: var(--text-muted); font-size: 12px; }
+  footer { max-width: 1500px; margin: 0 auto; padding: 4px 24px 28px; color: var(--text-muted); font-size: 11.5px; }
   .empty { padding: 24px; text-align: center; color: var(--text-muted); }
-  .btn {
-    border: 1px solid var(--border-strong); border-radius: 6px; padding: 5px 12px;
-    background: var(--surface-1); color: var(--text-primary); font-size: 13px; cursor: pointer;
-  }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  .btn.danger { color: #b3261e; border-color: #b3261e; background: transparent; }
-  @media (prefers-color-scheme: dark) { .btn.danger { color: #e66767; border-color: #e66767; } }
-  .chip.added { background: var(--accent-soft); color: var(--accent); margin-left: 6px; }
+  /* ---- modal ---- */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none;
     align-items: flex-start; justify-content: center; padding: 4vh 16px; z-index: 10; overflow: auto;
   }
   .modal-overlay.open { display: flex; }
   .modal {
-    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
-    max-width: 900px; width: 100%; padding: 20px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    max-width: 900px; width: 100%; padding: 20px; box-shadow: var(--shadow);
   }
   .modal h2 { margin: 0 0 4px; font-size: 16px; }
   .modal .hint { color: var(--text-muted); font-size: 12px; margin: 0 0 14px; }
@@ -150,42 +192,67 @@
   .field label { font-size: 12px; color: var(--text-secondary); }
   .field input, .field select {
     background: var(--surface-0); color: var(--text-primary);
-    border: 1px solid var(--border-strong); border-radius: 6px; padding: 6px 8px; font-size: 13px;
+    border: 1px solid var(--border-strong); border-radius: 4px; padding: 6px 8px; font-size: 12.5px;
   }
   .field .sub-hint { font-size: 11px; color: var(--text-muted); }
   .preview { border: 1px solid var(--border); border-radius: 8px; padding: 12px; align-self: start; }
-  .preview h3 { margin: 0 0 8px; font-size: 13px; color: var(--text-secondary); }
+  .preview h3 { margin: 0 0 8px; font-size: 12.5px; color: var(--text-secondary); }
   .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
   .form-error { color: #b3261e; font-size: 12px; margin-right: auto; align-self: center; }
   @media (prefers-color-scheme: dark) { .form-error { color: #e66767; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>College Priority Rankings — Dashboard</h1>
-  <p class="sub">Reproduces the <code>In_Demand.xlsx</code> scoring model. Toggle the bonus levers or filter below;
-  scores, ranks and ordering recompute exactly as the workbook does. Click a row for the full per-college breakdown.</p>
-</header>
+<div class="topbar">
+  <h1>College Priority Rankings</h1>
+  <span class="sub">Early-careers hiring · reproduces the In_Demand.xlsx scoring model · click a chart to cross-filter</span>
+</div>
 
-<div class="panel">
-  <div class="controls">
-    <label class="switch control"><input type="checkbox" id="engToggle" checked><span class="track"><span class="knob"></span></span><span>Engagement bonus</span></label>
-    <label class="switch control"><input type="checkbox" id="divToggle"><span class="track"><span class="knob"></span></span><span>Diversity bonus</span></label>
-    <span class="control"><label for="zoneSel">Zone</label>
-      <select id="zoneSel"><option>All</option></select></span>
-    <span class="control"><label for="cgSel">CG&nbsp;Priority</label>
-      <select id="cgSel"><option>All</option></select></span>
-    <span class="control"><input type="search" id="search" placeholder="Search college / city / state…" aria-label="Search"></span>
-    <button class="btn primary" id="addBtn" type="button">+ Add college</button>
-    <span class="count" id="count"></span>
+<div class="canvas">
+  <div class="visual">
+    <div class="slicers">
+      <label class="switch control"><input type="checkbox" id="engToggle" checked><span class="track"><span class="knob"></span></span><span>Engagement bonus</span></label>
+      <label class="switch control"><input type="checkbox" id="divToggle"><span class="track"><span class="knob"></span></span><span>Diversity bonus</span></label>
+      <span class="control"><label for="zoneSel">Zone</label>
+        <select id="zoneSel"><option>All</option></select></span>
+      <span class="control"><label for="cgSel">CG&nbsp;Priority</label>
+        <select id="cgSel"><option>All</option></select></span>
+      <span class="control"><input type="search" id="search" placeholder="Search college / city / state…" aria-label="Search"></span>
+      <button class="btn primary" id="addBtn" type="button">+ Add college</button>
+      <button class="clearlink" id="clearBtn" type="button" hidden>Clear filters</button>
+      <span class="count" id="count"></span>
+    </div>
   </div>
-  <div class="tablewrap">
-    <table id="tbl">
-      <thead><tr id="headrow"></tr></thead>
-      <tbody id="tbody"></tbody>
-    </table>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="charts">
+    <div class="visual chartbox">
+      <p class="vtitle">Avg Total Priority Score by Zone <span class="vhint">· click to filter</span></p>
+      <div id="zoneChart"></div>
+    </div>
+    <div class="visual chartbox">
+      <p class="vtitle">Colleges by CG Priority <span class="vhint">· click to filter</span></p>
+      <div id="cgChart"></div>
+    </div>
+    <div class="visual chartbox">
+      <p class="vtitle">Top 10 by Total Priority Score</p>
+      <div id="topChart"></div>
+    </div>
+  </div>
+
+  <div class="visual">
+    <p class="vtitle">Priority rankings <span class="vhint">· Dashboard-sheet order (CG group, then total) · click a row for the full breakdown</span></p>
+    <div class="tablewrap">
+      <table id="tbl">
+        <thead><tr id="headrow"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
+
+<div id="tooltip" role="tooltip"></div>
 
 <div class="modal-overlay" id="overlay">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -538,14 +605,33 @@ const els = {
   overlay: document.getElementById("overlay"), form: document.getElementById("addForm"),
   preview: document.getElementById("preview"), locPreview: document.getElementById("locPreview"),
   formError: document.getElementById("formError"), modalTitle: document.getElementById("modalTitle"),
-  saveBtn: document.getElementById("saveBtn"),
+  saveBtn: document.getElementById("saveBtn"), kpis: document.getElementById("kpis"),
+  zoneChart: document.getElementById("zoneChart"), cgChart: document.getElementById("cgChart"),
+  topChart: document.getElementById("topChart"), tooltip: document.getElementById("tooltip"),
+  clearBtn: document.getElementById("clearBtn"),
 };
 const F = id => document.getElementById(id);
+const CAT = { P1: "var(--cat-p1)", P2: "var(--cat-p2)", NA: "var(--cat-na)" };
 
 function populateFilters() {
   const zones = [...new Set(Object.values(STATE_ZONE))].sort();
   for (const z of [...zones, "Unknown"]) els.zone.add(new Option(z));
   for (const g of ["NA","P1","P2"]) els.cg.add(new Option(g));
+}
+
+/* ---- filter pipeline (Power BI semantics: a visual is not filtered by its own selection) ---- */
+function viewSets() {
+  const rows = computeAll(els.eng.checked, els.div.checked, userColleges);
+  const ordered = dashSort(rows);
+  ordered.forEach((r, k) => r.rank = k + 1);
+  const q = els.search.value.trim().toLowerCase();
+  const bySearch = r => !q || r.name.toLowerCase().includes(q) || r.city.toLowerCase().includes(q) || r.state.toLowerCase().includes(q);
+  const byZone = r => els.zone.value === "All" || r.zone === els.zone.value;
+  const byCg = r => els.cg.value === "All" || r.cg === els.cg.value;
+  const searched = ordered.filter(bySearch);
+  const view = searched.filter(byZone).filter(byCg);
+  view.forEach((r, k) => r.rank = k + 1); // Excel's Dashboard renumbers the filtered view
+  return { all: rows, view, forZoneChart: searched.filter(byCg), forCgChart: searched.filter(byZone) };
 }
 
 function buildHead() {
@@ -555,32 +641,130 @@ function buildHead() {
   }).join("");
 }
 
-function currentRows() {
-  const rows = computeAll(els.eng.checked, els.div.checked, userColleges);
-  const ordered = dashSort(rows);
-  ordered.forEach((r, k) => r.rank = k + 1); // Dashboard SEQUENCE rank, pre-filter
-  let view = ordered.filter(r =>
-    (els.zone.value === "All" || r.zone === els.zone.value) &&
-    (els.cg.value === "All" || r.cg === els.cg.value));
-  // Excel's Dashboard ranks the *filtered* view 1..N — renumber like the sheet does
-  view.forEach((r, k) => r.rank = k + 1);
-  const q = els.search.value.trim().toLowerCase();
-  if (q) view = view.filter(r =>
-    r.name.toLowerCase().includes(q) || r.city.toLowerCase().includes(q) || r.state.toLowerCase().includes(q));
+function tableRows(view) {
   if (sortState) {
     const { key, dir } = sortState;
     const numeric = COLS.find(c => c.key === key).num;
-    view = view.slice().sort((a,b) => numeric
+    return view.slice().sort((a,b) => numeric
       ? dir * (a[key] - b[key])
       : dir * String(a[key]).localeCompare(String(b[key])));
   }
   return view;
 }
 
+/* ================= KPI tiles ================= */
+function kpiHTML(view) {
+  const n = view.length;
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+  const avgTotal = avg(view.map(r => r.total));
+  const avgCore = avg(view.map(r => r.core));
+  const top = view.slice().sort((a,b) => b.total - a.total)[0] || null;
+  const bonusState = `Engagement ${els.eng.checked ? "on" : "off"} · Diversity ${els.div.checked ? "on" : "off"}`;
+  return `
+    <div class="visual kpi"><div class="klabel">Colleges in view</div>
+      <div class="kvalue">${n}</div><div class="ksub">of ${COLLEGES.length + userColleges.length} total</div></div>
+    <div class="visual kpi"><div class="klabel">Avg Total Priority Score</div>
+      <div class="kvalue">${avgTotal === null ? "—" : avgTotal.toFixed(1)}</div><div class="ksub">${bonusState}</div></div>
+    <div class="visual kpi"><div class="klabel">Avg Weighted Core Score</div>
+      <div class="kvalue">${avgCore === null ? "—" : avgCore.toFixed(1)}</div><div class="ksub">before bonuses</div></div>
+    <div class="visual kpi"><div class="klabel">Top college in view</div>
+      <div class="kvalue">${top ? fmt1(top.total) : "—"}</div>
+      <div class="ksub" title="${top ? esc(top.name) : ""}">${top ? esc(top.name) : "no colleges match"}</div></div>`;
+}
+
+/* ================= charts (inline SVG, no libraries) ================= */
+function hbarSVG(items, { labelW = 96, valueFmt = v => v.toFixed(1) }) {
+  // thin horizontal bars, rounded data ends, direct value labels
+  const W = 380, barH = 16, gap = 11, padTop = 4;
+  const H = padTop + items.length * (barH + gap);
+  const maxV = Math.max(...items.map(d => d.value), 1e-9);
+  const barX = labelW + 6, barMaxW = W - barX - 44;
+  let out = `<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  items.forEach((d, i) => {
+    const y = padTop + i * (barH + gap);
+    const w = Math.max(2, d.value / maxV * barMaxW);
+    const dim = d.dim ? " dim" : "";
+    out += `<g class="mark${dim}" ${d.attr || ""} data-tip="${esc(d.tip)}">
+      <rect x="0" y="${y}" width="${W}" height="${barH}" fill="transparent"></rect>
+      <text x="${labelW}" y="${y + barH - 4}" text-anchor="end" font-size="11" fill="var(--text-secondary)">${esc(d.label)}</text>
+      <rect x="${barX}" y="${y}" width="${w}" height="${barH}" rx="3" fill="${d.color || "var(--bar)"}"></rect>
+      <text x="${barX + w + 5}" y="${y + barH - 4}" font-size="11" font-weight="600" fill="var(--text-primary)">${valueFmt(d.value)}</text>
+    </g>`;
+  });
+  return out + "</svg>";
+}
+
+const trunc = (s, n) => s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
+
+function zoneChartHTML(rows) {
+  const sel = els.zone.value;
+  const groups = new Map();
+  for (const r of rows) {
+    const g = groups.get(r.zone) || { sum: 0, n: 0 };
+    g.sum += r.total; g.n++; groups.set(r.zone, g);
+  }
+  const items = [...groups.entries()]
+    .map(([zone, g]) => ({ zone, avgv: g.sum / g.n, n: g.n }))
+    .sort((a,b) => b.avgv - a.avgv)
+    .map(d => ({
+      label: d.zone, value: d.avgv, dim: sel !== "All" && d.zone !== sel,
+      attr: `data-zone="${esc(d.zone)}"`,
+      tip: `${d.zone} — avg total <b>${d.avgv.toFixed(1)}</b> · ${d.n} college${d.n > 1 ? "s" : ""}`,
+    }));
+  return items.length ? hbarSVG(items, {}) : `<div class="empty">No colleges match</div>`;
+}
+
+function topChartHTML(view) {
+  const items = view.slice().sort((a,b) => b.total - a.total).slice(0, 10).map(r => ({
+    label: trunc(r.name, 22), value: r.total,
+    tip: `${esc(r.name)}<br>Total <b>${fmt2(r.total)}</b> · Core <b>${fmt2(r.core)}</b> · RANK.EQ <b>${r.prank}</b>`,
+    attr: `data-open="${r.i}"`,
+  }));
+  return items.length ? hbarSVG(items, { labelW: 132 }) : `<div class="empty">No colleges match</div>`;
+}
+
+function donutArc(cx, cy, rOut, rIn, a0, a1) {
+  const p = (r, a) => `${cx + r * Math.cos(a)} ${cy + r * Math.sin(a)}`;
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  return `M ${p(rOut, a0)} A ${rOut} ${rOut} 0 ${large} 1 ${p(rOut, a1)} L ${p(rIn, a1)} A ${rIn} ${rIn} 0 ${large} 0 ${p(rIn, a0)} Z`;
+}
+
+function cgChartHTML(rows) {
+  const sel = els.cg.value;
+  const order = ["P1", "P2", "NA"];
+  const counts = order.map(g => ({ g, n: rows.filter(r => r.cg === g).length })).filter(d => d.n > 0);
+  const total = counts.reduce((a,d) => a + d.n, 0);
+  if (!total) return `<div class="empty">No colleges match</div>`;
+  const cx = 85, cy = 85, rOut = 78, rIn = 50, gapA = 0.035;
+  let a = -Math.PI / 2, svg = `<svg viewBox="0 0 170 170" role="img">`;
+  for (const d of counts) {
+    const span = d.n / total * Math.PI * 2;
+    const pad = counts.length > 1 ? gapA : 0.0001;
+    const dim = sel !== "All" && d.g !== sel ? " dim" : "";
+    svg += `<path class="mark${dim}" data-cg="${d.g}" d="${donutArc(cx, cy, rOut, rIn, a + pad/2, a + span - pad/2)}"
+      fill="${CAT[d.g]}" data-tip="${d.g} — <b>${d.n}</b> college${d.n>1?"s":""} (${Math.round(d.n/total*100)}%)"></path>`;
+    if (d.n / total > 0.09) { // direct label inside the segment
+      const mid = a + span / 2, lr = (rOut + rIn) / 2;
+      svg += `<text x="${cx + lr * Math.cos(mid)}" y="${cy + lr * Math.sin(mid) + 4}" text-anchor="middle"
+        font-size="11" font-weight="600" fill="#fff" pointer-events="none">${d.n}</text>`;
+    }
+    a += span;
+  }
+  svg += `<text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="22" font-weight="600" fill="var(--text-primary)">${total}</text>
+    <text x="${cx}" y="${cy + 15}" text-anchor="middle" font-size="10" fill="var(--text-muted)">colleges</text></svg>`;
+  const legend = counts.map(d => `
+    <div class="li${sel !== "All" && d.g !== sel ? " dim" : ""}" data-cg="${d.g}">
+      <span class="dot" style="background:${CAT[d.g]}"></span>
+      <span>${d.g === "NA" ? "NA (no CG priority)" : d.g}</span><span class="lval">${d.n}</span>
+    </div>`).join("");
+  return `<div class="donutwrap">${svg}<div class="legend">${legend}</div></div>`;
+}
+
+/* ================= detail breakdown (unchanged logic) ================= */
 function detailHTML(r) {
   const c = r.raw;
   const bpAll = bpScores(c);
-  const rv = c.name.startsWith("RV College of Engineering");
+  const rv = c.name === "RV College of Engineering, Bengaluru (RVCE)";
   const first = r.i === 0;
   const comps = [
     ["Salary Index", r.sal, ADJ.salary],
@@ -613,7 +797,7 @@ function detailHTML(r) {
       <div class="kv"><span class="k">NIRF Index</span><span class="v">${fmt2(r.nirf)}</span></div>
       <div class="kv"><span class="k">NAAC grade</span><span class="v">${esc(c.naac ?? "—")} → ${fmt2(r.naac)}</span></div>
       <div class="kv"><span class="k">NBA value</span><span class="v">${esc(c.nba ?? "—")} → ${fmt2(r.nba)}%</span></div>
-      <div class="kv"><span class="k">Salary Index (median ÷ ₹18.5L max)</span><span class="v">${fmt2(r.sal)}</span></div>
+      <div class="kv"><span class="k">Salary Index (median ÷ list max)</span><span class="v">${fmt2(r.sal)}</span></div>
     </div>
     <div class="card"><h3>Brand Perception (working sheet)</h3>
       <div class="kv"><span class="k">Employer Preference</span><span class="v">${fmt1(bpAll.empPref)}</span></div>
@@ -644,28 +828,37 @@ function detailHTML(r) {
   </div>`;
 }
 
+/* ================= render ================= */
 function render() {
   buildHead();
-  const view = currentRows();
+  const { view, forZoneChart, forCgChart } = viewSets();
   els.count.textContent = `${view.length} of ${COLLEGES.length + userColleges.length} colleges`;
-  if (!view.length) {
+  els.clearBtn.hidden = els.zone.value === "All" && els.cg.value === "All" && !els.search.value.trim();
+  els.kpis.innerHTML = kpiHTML(view);
+  els.zoneChart.innerHTML = zoneChartHTML(forZoneChart);
+  els.cgChart.innerHTML = cgChartHTML(forCgChart);
+  els.topChart.innerHTML = topChartHTML(view);
+  const rows = tableRows(view);
+  if (!rows.length) {
     els.tbody.innerHTML = `<tr><td colspan="${COLS.length}"><div class="empty">No colleges match this filter</div></td></tr>`;
     return;
   }
-  els.tbody.innerHTML = view.map(r => `
+  const maxTotal = Math.max(...rows.map(r => r.total));
+  els.tbody.innerHTML = rows.map(r => `
     <tr class="data ${openRow === r.i ? "open" : ""}" data-i="${r.i}">
       <td class="num">${r.rank}</td>
       <td class="college">${esc(r.name)}${r.added ? '<span class="chip added">added</span>' : ""}</td>
       <td>${esc(r.city)}</td><td>${esc(r.state)}</td><td>${esc(r.zone)}</td>
       <td><span class="chip ${esc(r.cg)}">${esc(r.cg)}</span></td>
       <td class="num">${fmt2(r.core)}</td>
-      <td class="num"><b>${fmt2(r.total)}</b></td>
+      <td class="num"><b>${fmt2(r.total)}</b><span class="scorebar"><i style="width:${Math.max(0, r.total/maxTotal*100)}%"></i></span></td>
       <td class="num">${r.prank}</td>
     </tr>
     ${openRow === r.i ? `<tr class="detail"><td colspan="${COLS.length}">${detailHTML(r)}</td></tr>` : ""}
   `).join("");
 }
 
+/* ================= interactions ================= */
 els.headrow.addEventListener("click", e => {
   const th = e.target.closest("th"); if (!th) return;
   const key = th.dataset.key;
@@ -676,6 +869,7 @@ els.headrow.addEventListener("click", e => {
   else sortState = null;
   render();
 });
+
 els.tbody.addEventListener("click", e => {
   const editBtn = e.target.closest("[data-edit]");
   if (editBtn) { openModal(Number(editBtn.dataset.edit)); return; }
@@ -692,6 +886,35 @@ els.tbody.addEventListener("click", e => {
   openRow = openRow === i ? null : i;
   render();
 });
+
+/* chart cross-filtering (click selected item again to clear) */
+document.addEventListener("click", e => {
+  const z = e.target.closest("[data-zone]");
+  if (z) { els.zone.value = els.zone.value === z.dataset.zone ? "All" : z.dataset.zone; render(); return; }
+  const g = e.target.closest("[data-cg]");
+  if (g) { els.cg.value = els.cg.value === g.dataset.cg ? "All" : g.dataset.cg; render(); return; }
+  const o = e.target.closest("[data-open]");
+  if (o) { openRow = Number(o.dataset.open); render();
+    document.getElementById("tbl").scrollIntoView({ behavior: "smooth", block: "nearest" }); }
+});
+els.clearBtn.addEventListener("click", () => {
+  els.zone.value = "All"; els.cg.value = "All"; els.search.value = ""; render();
+});
+
+/* shared hover tooltip for chart marks */
+document.addEventListener("mousemove", e => {
+  const m = e.target.closest ? e.target.closest("[data-tip]") : null;
+  if (m) {
+    els.tooltip.innerHTML = m.dataset.tip;
+    els.tooltip.style.display = "block";
+    const pad = 12, tw = els.tooltip.offsetWidth;
+    let x = e.clientX + pad;
+    if (x + tw > window.innerWidth - 8) x = e.clientX - tw - pad;
+    els.tooltip.style.left = x + "px";
+    els.tooltip.style.top = (e.clientY + pad) + "px";
+  } else els.tooltip.style.display = "none";
+});
+
 for (const el of [els.eng, els.div, els.zone, els.cg]) el.addEventListener("change", render);
 els.search.addEventListener("input", render);
 
