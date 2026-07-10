@@ -23,7 +23,38 @@ formula logic are embedded in the file; no backend or external calls.
   every index, brand perception, scores and ranks auto-populate live using the
   workbook's own logic — exactly as if a row were appended to the College list
   sheet (including the salary/NBA maxima rescaling). Added colleges can be
-  edited or removed and persist in the browser via localStorage.
+  edited or removed. By default they persist per-browser via localStorage;
+  see below to share them across the whole team.
+
+## Team-shared additions (Supabase)
+
+Out of the box, colleges added through the UI stay in each person's browser.
+To make additions shared and live for the whole team:
+
+1. Create (or reuse) a [Supabase](https://supabase.com) project.
+2. In the project's SQL editor, run `supabase/shared_colleges.sql` from this
+   repo — it creates the `shared_colleges` table with row-level security.
+3. In `index.html`, find the `SHARED` config near the top of the last script
+   block and fill in your project URL and public anon key:
+
+   ```js
+   const SHARED = {
+     url: "https://YOURPROJECT.supabase.co",
+     anonKey: "YOUR_PUBLIC_ANON_KEY",
+     table: "shared_colleges",
+   };
+   ```
+
+4. Commit and push to `main` — the site republishes automatically.
+
+With SHARED configured, the slicer bar shows "↻ shared with team" (click it to
+refresh), everyone sees the same added colleges, and edits/removals sync
+through the table. The anon key is public by design and safe to embed; access
+is governed by the RLS policies in the SQL file (anyone with the page URL can
+read/write — right for an internal tool; switch the policies to
+`authenticated` if you later add Supabase Auth). If the database is
+unreachable the page still renders the baseline 67 colleges and offers a
+retry.
 
 Deploy by serving the file anywhere (e.g. GitHub Pages) or opening it directly
 in a browser.
