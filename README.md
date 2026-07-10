@@ -14,6 +14,12 @@ formula logic are embedded in the file; no backend or external calls.
   Score), sortable columns, plus the workbook's pure RANK.EQ priority rank.
 - **Breakdown:** click any row for the full per-college computation
   (salary/NIRF/NAAC/NBA indices, brand perception sub-scores, weights, bonuses).
+- **Add college:** enter just the raw data (name, location, NIRF ranks, NAAC,
+  NBA, salaries, engagement, diversity, CG priority) and the city/state/zone,
+  every index, brand perception, scores and ranks auto-populate live using the
+  workbook's own logic — exactly as if a row were appended to the College list
+  sheet (including the salary/NBA maxima rescaling). Added colleges can be
+  edited or removed and persist in the browser via localStorage.
 
 Deploy by serving the file anywhere (e.g. GitHub Pages) or opening it directly
 in a browser.

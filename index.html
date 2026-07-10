@@ -123,6 +123,41 @@
   .off { opacity: .55; }
   footer { max-width: 1280px; margin: 0 auto; padding: 0 24px 28px; color: var(--text-muted); font-size: 12px; }
   .empty { padding: 24px; text-align: center; color: var(--text-muted); }
+  .btn {
+    border: 1px solid var(--border-strong); border-radius: 6px; padding: 5px 12px;
+    background: var(--surface-1); color: var(--text-primary); font-size: 13px; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.danger { color: #b3261e; border-color: #b3261e; background: transparent; }
+  @media (prefers-color-scheme: dark) { .btn.danger { color: #e66767; border-color: #e66767; } }
+  .chip.added { background: var(--accent-soft); color: var(--accent); margin-left: 6px; }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none;
+    align-items: flex-start; justify-content: center; padding: 4vh 16px; z-index: 10; overflow: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    max-width: 900px; width: 100%; padding: 20px;
+  }
+  .modal h2 { margin: 0 0 4px; font-size: 16px; }
+  .modal .hint { color: var(--text-muted); font-size: 12px; margin: 0 0 14px; }
+  .formgrid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+  @media (max-width: 800px) { .formgrid { grid-template-columns: 1fr; } }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; align-content: start; }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  .field.wide { grid-column: 1 / -1; }
+  .field label { font-size: 12px; color: var(--text-secondary); }
+  .field input, .field select {
+    background: var(--surface-0); color: var(--text-primary);
+    border: 1px solid var(--border-strong); border-radius: 6px; padding: 6px 8px; font-size: 13px;
+  }
+  .field .sub-hint { font-size: 11px; color: var(--text-muted); }
+  .preview { border: 1px solid var(--border); border-radius: 8px; padding: 12px; align-self: start; }
+  .preview h3 { margin: 0 0 8px; font-size: 13px; color: var(--text-secondary); }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+  .form-error { color: #b3261e; font-size: 12px; margin-right: auto; align-self: center; }
+  @media (prefers-color-scheme: dark) { .form-error { color: #e66767; } }
 </style>
 </head>
 <body>
@@ -141,6 +176,7 @@
     <span class="control"><label for="cgSel">CG&nbsp;Priority</label>
       <select id="cgSel"><option>All</option></select></span>
     <span class="control"><input type="search" id="search" placeholder="Search college / city / state…" aria-label="Search"></span>
+    <button class="btn primary" id="addBtn" type="button">+ Add college</button>
     <span class="count" id="count"></span>
   </div>
   <div class="tablewrap">
@@ -148,6 +184,54 @@
       <thead><tr id="headrow"></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">Add college</h2>
+    <p class="hint">Enter the raw data as it would appear in the workbook's College list sheet.
+      Everything else — city, state, zone, every index, brand perception, scores and ranks — is computed automatically.</p>
+    <form id="addForm" class="formgrid" novalidate>
+      <div class="fields">
+        <div class="field wide"><label for="f_name">College name *</label>
+          <input id="f_name" required placeholder="e.g. National Institute of Engineering, Mysuru"></div>
+        <div class="field wide"><label for="f_loc">Location *</label>
+          <input id="f_loc" placeholder='e.g. "Mysuru, Karnataka" or "Karnataka, Mysuru"'>
+          <span class="sub-hint" id="locPreview"></span></div>
+        <div class="field"><label for="f_type">Type</label>
+          <input id="f_type" placeholder="e.g. Private (Autonomous)"></div>
+        <div class="field"><label for="f_year">Year of establishment</label>
+          <input id="f_year" type="number" min="1700" max="2026" placeholder="e.g. 1985"></div>
+        <div class="field"><label for="f_med">Median salary (₹)</label>
+          <input id="f_med" type="number" min="0" step="1000" placeholder="e.g. 800000"></div>
+        <div class="field"><label for="f_avg">Average salary (₹)</label>
+          <input id="f_avg" type="number" min="0" step="1000" placeholder="e.g. 950000"></div>
+        <div class="field"><label for="f_n25">NIRF rank 2025</label>
+          <input id="f_n25" placeholder='number, band ("101-150") or "-"'></div>
+        <div class="field"><label for="f_n24">NIRF rank 2024</label>
+          <input id="f_n24" placeholder='number, band or "-"'></div>
+        <div class="field"><label for="f_n23">NIRF rank 2023</label>
+          <input id="f_n23" placeholder='number, band or "-"'></div>
+        <div class="field"><label for="f_naac">NAAC grade</label>
+          <select id="f_naac"><option value="">(none)</option><option>A++</option><option>A+</option><option>A</option>
+            <option>B++</option><option>B+</option><option>B</option><option>C</option><option>D</option><option>-</option></select></div>
+        <div class="field"><label for="f_nba">NBA value</label>
+          <select id="f_nba"><option value="">(blank)</option><option>300</option><option>200</option><option>100</option><option>-</option></select></div>
+        <div class="field"><label for="f_eng">Engagement status</label>
+          <select id="f_eng"><option value="">(blank)</option><option>Low</option><option>Medium</option><option>High</option><option>NA</option></select></div>
+        <div class="field"><label for="f_div">Diversity</label>
+          <select id="f_div"><option value="">(blank)</option><option>Yes</option><option>No</option></select></div>
+        <div class="field"><label for="f_cg">CG Priority</label>
+          <select id="f_cg"><option>NA</option><option>P1</option><option>P2</option></select></div>
+      </div>
+      <div class="preview" id="preview" aria-live="polite"></div>
+      <div class="form-actions" style="grid-column:1/-1">
+        <span class="form-error" id="formError"></span>
+        <button type="button" class="btn" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn primary" id="saveBtn">Add college</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -301,21 +385,21 @@ function naacIndex(c) {
   return 0;
 }
 
-/* ---- NBA Working (max NBA value computed over the college list, like scoring!M3) ---- */
-const NBA_MAXVAL = Math.max(...COLLEGES.map(c => isNum(c.nba) ? c.nba : -Infinity));
-function nbaPct(c) {
+/* ---- NBA Working ----
+   The max NBA value is MAX over the active college list (scoring!M3), so an
+   added college with a higher value rescales everyone, exactly like the sheet. */
+function nbaPct(c, maxVal) {
   const v = c.nba;
   let score;
-  if (isNum(v) && v > 0) score = Math.min(NBA_MAX_POINTS, v/NBA_MAXVAL*NBA_MAX_POINTS);
+  if (isNum(v) && v > 0) score = Math.min(NBA_MAX_POINTS, v/maxVal*NBA_MAX_POINTS);
   else if (isNum(v)) score = 0;
   else if (v === null || v === "" || v === "-") score = 0;
-  else score = Math.min(NBA_MAX_POINTS, NBA_PARTIAL/NBA_MAXVAL*NBA_MAX_POINTS); // partial credit for text
+  else score = Math.min(NBA_MAX_POINTS, NBA_PARTIAL/maxVal*NBA_MAX_POINTS); // partial credit for text
   return score/NBA_MAX_POINTS*100;
 }
 
-/* ---- Salary Working (max median computed over the list) ---- */
-const MAX_MED = Math.max(...COLLEGES.map(c => isNum(c.med) ? c.med : -Infinity));
-const salIndex = c => isNum(c.med) ? c.med/MAX_MED*100 : 0;
+/* ---- Salary Working (max median is MAX over the active list, like the sheet) ---- */
+const salIndex = (c, maxMed) => isNum(c.med) ? c.med/maxMed*100 : 0;
 
 /* ---- Location Working ---- */
 function resolveLocation(c) {
@@ -354,7 +438,7 @@ function bpRankNum(v) {
 }
 function bpScores(c) {
   const n = median3(0, BP.A - BP.B*Math.log(bpRankNum(c.nirf25)), 100);
-  const salSrc = c.name.startsWith("RV College of Engineering") ? c.med : c.avg; // quirk
+  const salSrc = c.name === "RV College of Engineering, Bengaluru (RVCE)" ? c.med : c.avg; // quirk
   const o = isNum(salSrc) ? salSrc : BP.SAL_FLOOR;
   const p = median3(BP.SAL_MIN, BP.SAL_MIN + (100-BP.SAL_MIN)*(o-BP.SAL_FLOOR)/(BP.SAL_CAP-BP.SAL_FLOOR), 100);
   const q = isNum(c.year)
@@ -383,11 +467,17 @@ function bpForRanking(i, c) {
   return bpScores(c).talent;                // column F = Talent Quality
 }
 
-/* ---- Final Rankings assembly ---- */
-function computeAll(engOn, divOn) {
-  const rows = COLLEGES.map((c, i) => {
+/* ---- Final Rankings assembly ----
+   `extra` = colleges added through the UI; they behave exactly like rows
+   appended to the College list sheet (they join the salary/NBA maxima and
+   the Brand Perception sheet inside its lookup range). */
+function computeAll(engOn, divOn, extra) {
+  const list = extra && extra.length ? COLLEGES.concat(extra) : COLLEGES;
+  const maxMed = Math.max(...list.map(c => isNum(c.med) ? c.med : -Infinity));
+  const maxNba = Math.max(...list.map(c => isNum(c.nba) ? c.nba : -Infinity));
+  const rows = list.map((c, i) => {
     const loc = resolveLocation(c);
-    const sal = salIndex(c), nirf = nirfIndex(c), naac = naacIndex(c), nba = nbaPct(c);
+    const sal = salIndex(c, maxMed), nirf = nirfIndex(c), naac = naacIndex(c), nba = nbaPct(c, maxNba);
     const bp = bpForRanking(i, c);
     const cgi = CG_INDEX[String(c.cg || "").trim().toUpperCase()] || 0;
     const core = sal*ADJ.salary + nirf*ADJ.nirf + naac*ADJ.naac + nba*ADJ.nba
@@ -396,7 +486,8 @@ function computeAll(engOn, divOn) {
     const divb = DIV_BONUS[String(c.div || "").trim().toLowerCase()] ?? 0;
     const total = core + (engOn ? engb : 0) + (divOn ? divb : 0);
     return { i, name: c.name, city: loc.city, state: loc.state, zone: loc.zone,
-             sal, nirf, naac, nba, bp, cgi, core, engb, divb, total, cg: c.cg, raw: c };
+             sal, nirf, naac, nba, bp, cgi, core, engb, divb, total, cg: c.cg, raw: c,
+             added: i >= COLLEGES.length };
   });
   for (const r of rows) { // RANK.EQ, descending, over all colleges
     r.prank = 1 + rows.filter(o => o.total > r.total).length;
@@ -433,19 +524,28 @@ const COLS = [
 ];
 let sortState = null;        // null = workbook order; else {key, dir}
 let openRow = null;          // college index of the open breakdown
+let editIndex = null;        // index into userColleges while editing, else null
+const STORE_KEY = "collegeDashboard.addedColleges.v1";
+let userColleges = [];
+try { userColleges = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { userColleges = []; }
+const saveUser = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(userColleges)); } catch (e) {} };
+
 const els = {
   eng: document.getElementById("engToggle"), div: document.getElementById("divToggle"),
   zone: document.getElementById("zoneSel"), cg: document.getElementById("cgSel"),
   search: document.getElementById("search"), count: document.getElementById("count"),
   tbody: document.getElementById("tbody"), headrow: document.getElementById("headrow"),
+  overlay: document.getElementById("overlay"), form: document.getElementById("addForm"),
+  preview: document.getElementById("preview"), locPreview: document.getElementById("locPreview"),
+  formError: document.getElementById("formError"), modalTitle: document.getElementById("modalTitle"),
+  saveBtn: document.getElementById("saveBtn"),
 };
+const F = id => document.getElementById(id);
 
 function populateFilters() {
-  const rows = computeAll(true, false);
-  const zones = [...new Set(rows.map(r => r.zone))]
-    .sort((a,b) => (a==="Unknown")-(b==="Unknown") || a.localeCompare(b));
-  for (const z of zones) els.zone.add(new Option(z));
-  for (const g of [...new Set(COLLEGES.map(c => c.cg))].sort()) els.cg.add(new Option(g));
+  const zones = [...new Set(Object.values(STATE_ZONE))].sort();
+  for (const z of [...zones, "Unknown"]) els.zone.add(new Option(z));
+  for (const g of ["NA","P1","P2"]) els.cg.add(new Option(g));
 }
 
 function buildHead() {
@@ -456,7 +556,7 @@ function buildHead() {
 }
 
 function currentRows() {
-  const rows = computeAll(els.eng.checked, els.div.checked);
+  const rows = computeAll(els.eng.checked, els.div.checked, userColleges);
   const ordered = dashSort(rows);
   ordered.forEach((r, k) => r.rank = k + 1); // Dashboard SEQUENCE rank, pre-filter
   let view = ordered.filter(r =>
@@ -536,6 +636,10 @@ function detailHTML(r) {
       <div class="kv total"><span class="k">Total Priority Score</span><span class="v">${fmt2(r.total)}</span></div>
       <div class="kv"><span class="k">Priority Rank (RANK.EQ on total)</span><span class="v">${r.prank}</span></div>
       <div class="kv"><span class="k">Base Rank (core only)</span><span class="v">${r.brank}</span></div>
+      ${r.added ? `<div class="form-actions" style="margin-top:12px">
+        <button type="button" class="btn" data-edit="${r.i - COLLEGES.length}">Edit</button>
+        <button type="button" class="btn danger" data-remove="${r.i - COLLEGES.length}">Remove</button>
+      </div>` : ""}
     </div>
   </div>`;
 }
@@ -543,7 +647,7 @@ function detailHTML(r) {
 function render() {
   buildHead();
   const view = currentRows();
-  els.count.textContent = `${view.length} of ${COLLEGES.length} colleges`;
+  els.count.textContent = `${view.length} of ${COLLEGES.length + userColleges.length} colleges`;
   if (!view.length) {
     els.tbody.innerHTML = `<tr><td colspan="${COLS.length}"><div class="empty">No colleges match this filter</div></td></tr>`;
     return;
@@ -551,7 +655,7 @@ function render() {
   els.tbody.innerHTML = view.map(r => `
     <tr class="data ${openRow === r.i ? "open" : ""}" data-i="${r.i}">
       <td class="num">${r.rank}</td>
-      <td class="college">${esc(r.name)}</td>
+      <td class="college">${esc(r.name)}${r.added ? '<span class="chip added">added</span>' : ""}</td>
       <td>${esc(r.city)}</td><td>${esc(r.state)}</td><td>${esc(r.zone)}</td>
       <td><span class="chip ${esc(r.cg)}">${esc(r.cg)}</span></td>
       <td class="num">${fmt2(r.core)}</td>
@@ -573,6 +677,16 @@ els.headrow.addEventListener("click", e => {
   render();
 });
 els.tbody.addEventListener("click", e => {
+  const editBtn = e.target.closest("[data-edit]");
+  if (editBtn) { openModal(Number(editBtn.dataset.edit)); return; }
+  const removeBtn = e.target.closest("[data-remove]");
+  if (removeBtn) {
+    const idx = Number(removeBtn.dataset.remove);
+    if (confirm(`Remove "${userColleges[idx].name}" from the rankings?`)) {
+      userColleges.splice(idx, 1); saveUser(); openRow = null; render();
+    }
+    return;
+  }
   const tr = e.target.closest("tr.data"); if (!tr) return;
   const i = Number(tr.dataset.i);
   openRow = openRow === i ? null : i;
@@ -580,6 +694,115 @@ els.tbody.addEventListener("click", e => {
 });
 for (const el of [els.eng, els.div, els.zone, els.cg]) el.addEventListener("change", render);
 els.search.addEventListener("input", render);
+
+/* ================= Add / edit college ================= */
+/* Parse form fields with the same tolerance as the workbook cells:
+   NIRF accepts a number, a band like "101-150", or "-"; blanks stay blank. */
+const parseNirf = s => { s = s.trim(); if (s === "") return null;
+  return /^\d+(\.\d+)?$/.test(s) ? Number(s) : s; };
+const parseNum = s => { s = String(s).trim(); return s === "" ? null : Number(s); };
+const parseNba = s => s === "" ? null : (s === "-" ? "-" : Number(s));
+
+function formCollege() {
+  return {
+    name: F("f_name").value.trim(),
+    loc: F("f_loc").value.trim(),
+    type: F("f_type").value.trim() || null,
+    year: parseNum(F("f_year").value),
+    div: F("f_div").value || null,
+    nirf25: parseNirf(F("f_n25").value),
+    nirf24: parseNirf(F("f_n24").value),
+    nirf23: parseNirf(F("f_n23").value),
+    naac: F("f_naac").value || null,
+    nba: parseNba(F("f_nba").value),
+    avg: parseNum(F("f_avg").value),
+    med: parseNum(F("f_med").value),
+    eng: F("f_eng").value || null,
+    cg: F("f_cg").value,
+  };
+}
+
+function validateForm(c) {
+  if (!c.name) return "College name is required.";
+  const clash = COLLEGES.some(x => x.name.toLowerCase() === c.name.toLowerCase()) ||
+    userColleges.some((x, j) => j !== editIndex && x.name.toLowerCase() === c.name.toLowerCase());
+  if (clash) return "A college with this exact name already exists — names must be unique.";
+  if (!c.loc) return "Location is required (it drives city, state and zone).";
+  return "";
+}
+
+function updatePreview() {
+  const c = formCollege();
+  const loc = resolveLocation(c);
+  els.locPreview.textContent = c.loc
+    ? `→ City: ${loc.city || "—"} · State: ${loc.state} · Zone: ${loc.zone}`
+    : "";
+  const candidate = { ...c, name: c.name || "(new college)" };
+  const extra = userColleges.slice();
+  if (editIndex !== null) extra[editIndex] = candidate; else extra.push(candidate);
+  const rows = computeAll(els.eng.checked, els.div.checked, extra);
+  const r = rows.find(x => x.raw === candidate);
+  const ordered = dashSort(rows);
+  const dashRank = ordered.indexOf(r) + 1;
+  els.preview.innerHTML = `<h3>Auto-computed (live)</h3>
+    <div class="kv"><span class="k">City / State / Zone</span><span class="v">${esc(r.city || "—")} · ${esc(r.state)} · ${esc(r.zone)}</span></div>
+    <div class="kv"><span class="k">Salary Index</span><span class="v">${fmt2(r.sal)}</span></div>
+    <div class="kv"><span class="k">NIRF Index</span><span class="v">${fmt2(r.nirf)}</span></div>
+    <div class="kv"><span class="k">NAAC Index</span><span class="v">${fmt2(r.naac)}</span></div>
+    <div class="kv"><span class="k">NBA Score %</span><span class="v">${fmt2(r.nba)}</span></div>
+    <div class="kv"><span class="k">Brand Perception</span><span class="v">${r.bp === null ? "—" : fmt1(r.bp)}</span></div>
+    <div class="kv"><span class="k">CG Priority Index</span><span class="v">${r.cgi}</span></div>
+    <div class="kv total"><span class="k">Weighted Core Score</span><span class="v">${fmt2(r.core)}</span></div>
+    <div class="kv"><span class="k">Bonuses (current toggles)</span><span class="v">+${(els.eng.checked ? r.engb : 0) + (els.div.checked ? r.divb : 0)}</span></div>
+    <div class="kv total"><span class="k">Total Priority Score</span><span class="v">${fmt2(r.total)}</span></div>
+    <div class="kv"><span class="k">Dashboard rank</span><span class="v">${dashRank} of ${rows.length}</span></div>
+    <div class="kv"><span class="k">Priority Rank (RANK.EQ)</span><span class="v">${r.prank}</span></div>`;
+}
+
+function openModal(idx) {
+  editIndex = idx === undefined ? null : idx;
+  const c = editIndex === null ? null : userColleges[editIndex];
+  els.modalTitle.textContent = c ? "Edit college" : "Add college";
+  els.saveBtn.textContent = c ? "Save changes" : "Add college";
+  els.formError.textContent = "";
+  F("f_name").value = c ? c.name : "";
+  F("f_loc").value = c ? c.loc : "";
+  F("f_type").value = c && c.type ? c.type : "";
+  F("f_year").value = c && c.year !== null ? c.year : "";
+  F("f_med").value = c && c.med !== null ? c.med : "";
+  F("f_avg").value = c && c.avg !== null ? c.avg : "";
+  F("f_n25").value = c && c.nirf25 !== null ? c.nirf25 : "";
+  F("f_n24").value = c && c.nirf24 !== null ? c.nirf24 : "";
+  F("f_n23").value = c && c.nirf23 !== null ? c.nirf23 : "";
+  F("f_naac").value = c && c.naac !== null ? c.naac : "";
+  F("f_nba").value = c && c.nba !== null ? String(c.nba) : "";
+  F("f_eng").value = c && c.eng !== null ? c.eng : "";
+  F("f_div").value = c && c.div !== null ? c.div : "";
+  F("f_cg").value = c ? c.cg : "NA";
+  updatePreview();
+  els.overlay.classList.add("open");
+  F("f_name").focus();
+}
+function closeModal() { els.overlay.classList.remove("open"); editIndex = null; }
+
+document.getElementById("addBtn").addEventListener("click", () => openModal());
+document.getElementById("cancelBtn").addEventListener("click", closeModal);
+els.overlay.addEventListener("click", e => { if (e.target === els.overlay) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && els.overlay.classList.contains("open")) closeModal(); });
+els.form.addEventListener("input", updatePreview);
+els.form.addEventListener("change", updatePreview);
+els.form.addEventListener("submit", e => {
+  e.preventDefault();
+  const c = formCollege();
+  const err = validateForm(c);
+  if (err) { els.formError.textContent = err; return; }
+  if (editIndex !== null) userColleges[editIndex] = c; else userColleges.push(c);
+  const newIndex = COLLEGES.length + (editIndex !== null ? editIndex : userColleges.length - 1);
+  saveUser(); closeModal();
+  openRow = newIndex;   // open the breakdown so the recruiter sees the computed result
+  sortState = null;
+  render();
+});
 
 populateFilters();
 render();
