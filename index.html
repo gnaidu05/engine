@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>College Priority Rankings — Dashboard</title>
+<style>
+  :root {
+    --surface-0: #f4f4f2;
+    --surface-1: #fcfcfb;
+    --border: #e3e2de;
+    --border-strong: #c9c8c2;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7974;
+    --accent: #2a78d6;
+    --accent-soft: #cde2fb;
+    --bar: #2a78d6;
+    --bar-track: #ecebe7;
+    --row-hover: #f0f4fa;
+    --row-open: #e8f0fb;
+    --chip-p1-bg: #dcebfb; --chip-p1-fg: #14477e;
+    --chip-p2-bg: #e7e6f7; --chip-p2-fg: #3a3080;
+    --chip-na-bg: #ececea; --chip-na-fg: #52514e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-0: #121211;
+      --surface-1: #1a1a19;
+      --border: #33322f;
+      --border-strong: #4a4945;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #8f8e86;
+      --accent: #3987e5;
+      --accent-soft: #1c3a5e;
+      --bar: #3987e5;
+      --bar-track: #2a2a28;
+      --row-hover: #20242b;
+      --row-open: #1d2a3c;
+      --chip-p1-bg: #1c3a5e; --chip-p1-fg: #9ec5f4;
+      --chip-p2-bg: #2d2a52; --chip-p2-fg: #b6b0f0;
+      --chip-na-bg: #2a2a28; --chip-na-fg: #c3c2b7;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface-0); color: var(--text-primary);
+    font: 14px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header { padding: 20px 24px 0; max-width: 1280px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--text-secondary); margin: 0 0 16px; font-size: 13px; }
+  .panel {
+    max-width: 1280px; margin: 0 auto 24px; background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .control { display: flex; align-items: center; gap: 8px; }
+  .control label { color: var(--text-secondary); font-size: 13px; white-space: nowrap; }
+  select, input[type="search"] {
+    background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 5px 8px; font-size: 13px;
+  }
+  input[type="search"] { width: 240px; }
+  .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .switch input { position: absolute; opacity: 0; }
+  .track {
+    width: 34px; height: 19px; border-radius: 10px; background: var(--bar-track);
+    border: 1px solid var(--border-strong); position: relative; transition: background .15s;
+  }
+  .switch input:checked + .track { background: var(--accent); border-color: var(--accent); }
+  .knob {
+    position: absolute; top: 1px; left: 1px; width: 15px; height: 15px;
+    border-radius: 50%; background: var(--surface-1); transition: left .15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  .switch input:checked + .track .knob { left: 16px; }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .count { margin-left: auto; color: var(--text-muted); font-size: 13px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 980px; }
+  th, td { padding: 7px 10px; text-align: left; white-space: nowrap; }
+  td.college { white-space: normal; min-width: 260px; }
+  th {
+    position: sticky; top: 0; background: var(--surface-1); z-index: 1;
+    color: var(--text-secondary); font-weight: 600; font-size: 12px;
+    border-bottom: 1px solid var(--border-strong); cursor: pointer; user-select: none;
+  }
+  th .dir { color: var(--accent); }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr.data { border-top: 1px solid var(--border); cursor: pointer; }
+  tbody tr.data:hover { background: var(--row-hover); }
+  tbody tr.data.open { background: var(--row-open); }
+  .chip {
+    display: inline-block; padding: 1px 8px; border-radius: 9px;
+    font-size: 12px; font-weight: 600;
+  }
+  .chip.P1 { background: var(--chip-p1-bg); color: var(--chip-p1-fg); }
+  .chip.P2 { background: var(--chip-p2-bg); color: var(--chip-p2-fg); }
+  .chip.NA { background: var(--chip-na-bg); color: var(--chip-na-fg); }
+  tr.detail td { padding: 0; }
+  .detail-inner {
+    padding: 16px; background: var(--surface-1); border-top: 1px dashed var(--border-strong);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;
+  }
+  .card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .card h3 { margin: 0 0 8px; font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 2px 0; }
+  .kv .k { color: var(--text-muted); }
+  .kv .v { font-variant-numeric: tabular-nums; text-align: right; }
+  .kv.total { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; font-weight: 600; }
+  .comp { margin: 6px 0; }
+  .comp .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); }
+  .comp .lbl b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .comp .trackbar { height: 6px; border-radius: 4px; background: var(--bar-track); margin-top: 3px; }
+  .comp .fill { height: 6px; border-radius: 4px; background: var(--bar); }
+  .note { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .off { opacity: .55; }
+  footer { max-width: 1280px; margin: 0 auto; padding: 0 24px 28px; color: var(--text-muted); font-size: 12px; }
+  .empty { padding: 24px; text-align: center; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>College Priority Rankings — Dashboard</h1>
+  <p class="sub">Reproduces the <code>In_Demand.xlsx</code> scoring model. Toggle the bonus levers or filter below;
+  scores, ranks and ordering recompute exactly as the workbook does. Click a row for the full per-college breakdown.</p>
+</header>
+
+<div class="panel">
+  <div class="controls">
+    <label class="switch control"><input type="checkbox" id="engToggle" checked><span class="track"><span class="knob"></span></span><span>Engagement bonus</span></label>
+    <label class="switch control"><input type="checkbox" id="divToggle"><span class="track"><span class="knob"></span></span><span>Diversity bonus</span></label>
+    <span class="control"><label for="zoneSel">Zone</label>
+      <select id="zoneSel"><option>All</option></select></span>
+    <span class="control"><label for="cgSel">CG&nbsp;Priority</label>
+      <select id="cgSel"><option>All</option></select></span>
+    <span class="control"><input type="search" id="search" placeholder="Search college / city / state…" aria-label="Search"></span>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="tablewrap">
+    <table id="tbl">
+      <thead><tr id="headrow"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  Weighted Core Score = Salary×0.25 + NIRF×0.1667 + NAAC×0.1667 + NBA×0.1667 + Brand&nbsp;Perception×0.125 + CG&nbsp;Priority×0.125
+  (weights derived from the workbook's Weightage Framework with YOE excluded and redistributed).
+  Bonuses are added on top of the core score when toggled on. “Rank” is the Dashboard-sheet ordering
+  (CG&nbsp;priority group, then Total Priority Score); “Priority Rank” is the workbook's pure RANK.EQ over all colleges,
+  independent of the Zone/CG filters. Workbook quirks are preserved — see the Brand Perception card in any row's breakdown.
+</footer>
+
+<!-- MODEL_START -->
+<script id="model">
+"use strict";
+/* ============================================================
+   Scoring model — a faithful replication of In_Demand.xlsx.
+   Every constant below is copied from the workbook's `scoring`
+   and `Config` sheets; formulas mirror the working sheets.
+   Verified cell-for-cell against the workbook's cached values.
+   ============================================================ */
+
+/* College list sheet, rows 4-70, in workbook row order (67 colleges). */
+const COLLEGES = [
+{"name":"Amrita School of Engineering, Coimbatore","loc":"Tamil Nadu, Coimbatore","type":"Private (Deemed)","year":1994,"div":"No","nirf25":23,"nirf24":23,"nirf23":19,"naac":"A++","nba":300,"avg":908000,"med":775000,"eng":"Low","cg":"P2"},
+{"name":"College of Engineering, Guindy","loc":"Tamil Nadu, Chennai","type":"Govt (Autonomous)","year":1794,"div":"No","nirf25":20,"nirf24":14,"nirf23":13,"naac":"A++","nba":300,"avg":800000,"med":750000,"eng":"Low","cg":"P1"},
+{"name":"Banasthali Vidyapith, Banasthali","loc":"Rajasthan, Banasthali","type":"Private (Deemed)","year":1935,"div":"Yes","nirf25":71,"nirf24":78,"nirf23":68,"naac":"A++","nba":"-","avg":980000,"med":950000,"eng":"Low","cg":"P2"},
+{"name":"Chitkara University, Rajpura-Patiala, Punjab","loc":"Punjab, Rajpura","type":"Private","year":2010,"div":"No","nirf25":89,"nirf24":94,"nirf23":92,"naac":"-","nba":"-","avg":900000,"med":850000,"eng":"High","cg":"P2"},
+{"name":"Manipal Institute of Technology, Manipal","loc":"Karnataka, Manipal","type":"Private (Deemed)","year":1957,"div":"No","nirf25":59,"nirf24":56,"nirf23":61,"naac":"A++","nba":200,"avg":1350000,"med":1100000,"eng":"Low","cg":"P1"},
+{"name":"PSG College of Technology, Coimbatore","loc":"Tamil Nadu, Coimbatore","type":"Autonomous (Aided)","year":1951,"div":"No","nirf25":67,"nirf24":67,"nirf23":63,"naac":"A","nba":300,"avg":1400000,"med":1200000,"eng":"Low","cg":"P1"},
+{"name":"SASTRA Deemed University, Thanjavur","loc":"Tamil Nadu, Thanjavur","type":"Private (Deemed)","year":1984,"div":"No","nirf25":40,"nirf24":38,"nirf23":34,"naac":"A++","nba":"-","avg":750000,"med":650000,"eng":"Low","cg":"P1"},
+{"name":"SRM Institute of Science and Technology, Kattankulathur Campus","loc":"Tamil Nadu, Kattankulathur","type":"Private (Deemed)","year":1985,"div":"No","nirf25":14,"nirf24":13,"nirf23":28,"naac":"A++","nba":"-","avg":900000,"med":620000,"eng":"High","cg":"NA"},
+{"name":"Vellore Institute of Technology, Vellore","loc":"Tamil Nadu, Vellore","type":"Private (Deemed)","year":1984,"div":"No","nirf25":16,"nirf24":11,"nirf23":11,"naac":"A++","nba":"-","avg":990000,"med":899000,"eng":"Low","cg":"P1"},
+{"name":"Sri Sivasubramaniya Nadar College of Engineering, Chennai","loc":"Tamil Nadu, Chennai","type":"Private (Autonomous)","year":1996,"div":"No","nirf25":47,"nirf24":46,"nirf23":45,"naac":"A+","nba":300,"avg":1200000,"med":1100000,"eng":"Low","cg":"P1"},
+{"name":"M. S. Ramaiah Institute of Technology, Bengaluru","loc":"Karnataka, Bengaluru","type":"Private (Autonomous)","year":1962,"div":"No","nirf25":75,"nirf24":75,"nirf23":78,"naac":"A+","nba":300,"avg":825000,"med":750000,"eng":"Low","cg":"P1"},
+{"name":"RV College of Engineering, Bengaluru (RVCE)","loc":"Karnataka, Bengaluru","type":"Private (Autonomous)","year":1963,"div":"No","nirf25":"101-150","nirf24":99,"nirf23":96,"naac":"A+ ","nba":null,"avg":1376000,"med":1100000,"eng":"Low","cg":"P1"},
+{"name":"PES University, Bengaluru","loc":"Karnataka, Bengaluru","type":"Private (Deemed)","year":1972,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"101-150","naac":"A+ ","nba":null,"avg":1400000,"med":1200000,"eng":"Low","cg":"P1"},
+{"name":"Dayananda Sagar College of Engineering, Bengaluru","loc":"Karnataka, Bengaluru","type":"Private (Autonomous)","year":1979,"div":"No","nirf25":"201-300","nirf24":"201-300","nirf23":null,"naac":"A","nba":null,"avg":1000000,"med":800000,"eng":"High","cg":"P2"},
+{"name":"BMS College of Engineering, Bengaluru","loc":"Karnataka, Bengaluru","type":"Private (Autonomous)","year":1946,"div":"No","nirf25":"151-200","nirf24":"151-200","nirf23":"101-150","naac":"A++","nba":null,"avg":1297000,"med":1150000,"eng":"Low","cg":"P1"},
+{"name":"Shiv Nadar University, Greater Noida","loc":"Greater Noida, Uttar Pradesh","type":"Private University","year":2011,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A","nba":"-","avg":1285000,"med":1250000,"eng":"Low","cg":"P2"},
+{"name":"K.R. Mangalam University, Gurugram","loc":"Gurugram, Haryana","type":"Private University","year":2013,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A","nba":"-","avg":750000,"med":600000,"eng":"Low","cg":"NA"},
+{"name":"Sardar Patel Institute of Technology, Mumbai","loc":"Mumbai, Maharashtra ","type":"Private (Autonomous)","year":1957,"div":"No","nirf25":"-","nirf24":"201-300","nirf23":"-","naac":"A","nba":null,"avg":1451000,"med":1366000,"eng":"Low","cg":"P1"},
+{"name":"Sardar Patel College of Engineering, Mumbai","loc":"Mumbai, Maharashtra ","type":"Government-Aided (Autonomous)","year":1962,"div":"No","nirf25":"101-150","nirf24":"201-300","nirf23":"201-300","naac":"A","nba":null,"avg":544000,"med":500000,"eng":"Low","cg":"NA"},
+{"name":"Veermata Jijabai Technological Institute, Mumbai","loc":"Mumbai, Maharashtra ","type":"Government-Aided (Autonomous)","year":1887,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"101-150","naac":"A+","nba":null,"avg":1635000,"med":1400000,"eng":"Low","cg":"P1"},
+{"name":"K.J. Somaiya School of Engineering, Mumbai","loc":"Mumbai, Maharashtra ","type":"Private (Autonomous)","year":1983,"div":"No","nirf25":"201-300","nirf24":"201-300","nirf23":"201-300","naac":"A","nba":null,"avg":1000000,"med":750000,"eng":"Low","cg":"P1"},
+{"name":"Mukesh Patel School of Technology Management and Engineering, Mumbai","loc":"Mumbai, Maharashtra ","type":"Private Deemed University","year":1981,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"101-150","naac":"A+","nba":null,"avg":1300000,"med":1000000,"eng":"Medium","cg":"P2"},
+{"name":"O.P. Jindal University, Raigarh","loc":"Raigarh, Chattisgarh ","type":"State  University","year":2014,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A","nba":"-","avg":625000,"med":575000,"eng":"Low","cg":"NA"},
+{"name":"College of Engineering Pune (COEP Technological University)","loc":"Pune, Maharashtra ","type":"Government (State University / Autonomous)","year":1854,"div":"No","nirf25":90,"nirf24":77,"nirf23":73,"naac":"A+","nba":null,"avg":1796000,"med":1620000,"eng":"Low","cg":"P1"},
+{"name":"Thapar Institute of Engineering and Technology, Patiala","loc":"Patiala, Punjab","type":"Private University","year":1956,"div":"No","nirf25":29,"nirf24":29,"nirf23":20,"naac":"A++","nba":"-","avg":1200000,"med":1000000,"eng":"Low","cg":"P1"},
+{"name":"Cummins College of Engineering for Women, Pune","loc":"Pune, Maharashtra ","type":"Private (Autonomous)","year":1991,"div":"Yes","nirf25":"201-300","nirf24":"201-300","nirf23":"-","naac":"A+","nba":null,"avg":1600000,"med":900000,"eng":"Low","cg":"P1"},
+{"name":"Pune Institute of Computer Technology (PICT), Pune","loc":"Pune, Maharashtra ","type":"Private (Non-Autonomous / Affiliated)","year":1983,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A","nba":null,"avg":969000,"med":700000,"eng":"Low","cg":"P1"},
+{"name":"Vishwakarma Institute of Technology, Pune","loc":"Pune, Maharashtra ","type":"Private (Autonomous)","year":1983,"div":"No","nirf25":"101-150","nirf24":"151-200","nirf23":"151-200","naac":"A++","nba":null,"avg":950000,"med":760000,"eng":"Low","cg":"NA"},
+{"name":"Nirma University, Ahmedabad","loc":"Ahmedabad, Gujarat","type":"Private (University)","year":2003,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"101-150","naac":"A+","nba":null,"avg":928000,"med":1000000,"eng":"Low","cg":"P1"},
+{"name":"Dhirubhai Ambani University (DAIICT), Gandhinagar","loc":"Gandhinagar, Gujarat","type":"Private (State Private University","year":2001,"div":"No","nirf25":"201-300","nirf24":"-","nirf23":"-","naac":"A","nba":null,"avg":1400000,"med":1600000,"eng":"Low","cg":"P1"},
+{"name":"College of Engineering Trivandrum, Thiruvananthapuram","loc":"Trivendram, Kerala","type":"Govt (Autonomous)","year":1939,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"151-200","naac":"A","nba":null,"avg":1100000,"med":800000,"eng":"Low","cg":"P2"},
+{"name":"Jamia Millia Islamia, New Delhi","loc":"New Delhi","type":"Govt (Central University)","year":1920,"div":"No","nirf25":24,"nirf24":24,"nirf23":26,"naac":"A++","nba":300,"avg":1500000,"med":1400000,"eng":"NA","cg":"NA"},
+{"name":"Indira Gandhi Delhi Technical University for Women (IGDTUW), New Delhi","loc":"New Delhi","type":"State Public University","year":2013,"div":"Yes","nirf25":"201-300","nirf24":"151-200","nirf23":"151-200","naac":"A+","nba":"-","avg":2500000,"med":1850000,"eng":"Low","cg":"P1"},
+{"name":"Mahindra University, Hyderabad","loc":"Hyderabad, Telanga","type":"Private (Deemed)","year":2014,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"151-200","naac":"A++","nba":null,"avg":960000,"med":850000,"eng":"Low","cg":"P1"},
+{"name":"University Visvesvaraya College of Engineering, Bengaluru","loc":"Karnataka, Bengaluru","type":"Public State University","year":1917,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A++","nba":null,"avg":1000000,"med":800000,"eng":"Low","cg":"P1"},
+{"name":"Jaypee Institute of Information Technology, Noida","loc":"Noida","type":"Deemed University","year":2001,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"101-150","naac":"A","nba":300,"avg":1100000,"med":750000,"eng":"Medium","cg":"P2"},
+{"name":"Punjab Engineering College (Deemed to be University), Chandigarh","loc":"Chandigarh, Chandigarh","type":"State Government University","year":1953,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"101-150","naac":"B+","nba":null,"avg":1660000,"med":1360000,"eng":"NA","cg":"P1"},
+{"name":"J. C. Bose University of Science and Technology, YMCA, Faridabad","loc":"Faridabad, Haryana","type":"Govt (State University)","year":2009,"div":"No","nirf25":"151-200","nirf24":"151-200","nirf23":"101-150","naac":"A+","nba":"-","avg":875000,"med":825000,"eng":"Low","cg":"NA"},
+{"name":"Birsa Institute of Technology, Sindri","loc":"Dhanbad, Jharkhand","type":"Govt . college affiliated with JUT","year":1949,"div":"No","nirf25":"201-300","nirf24":"201-300","nirf23":"201-250","naac":"B","nba":null,"avg":700000,"med":850000,"eng":"Medium","cg":"NA"},
+{"name":"JSS Science and Technology University, Mysuru","loc":"Mysuru, Karnataka","type":"Private (Deemed)","year":1963,"div":"No","nirf25":"201-300","nirf24":"201-300","nirf23":"151-200","naac":"B++","nba":null,"avg":1400000,"med":1000000,"eng":"Low","cg":"NA"},
+{"name":"Shri Mata Vaishno Devi University, Katra","loc":"Katra, J&K","type":"State Public University","year":2004,"div":"No","nirf25":"151-200","nirf24":"151-200","nirf23":"101-150","naac":"B","nba":"-","avg":575000,"med":550000,"eng":"NA","cg":"NA"},
+{"name":"Test College","loc":"Pune, Maharashtra ","type":"Private","year":2002,"div":"No","nirf25":300,"nirf24":300,"nirf23":300,"naac":"B","nba":null,"avg":400000,"med":500000,"eng":"NA","cg":"NA"},
+{"name":"Test College 2","loc":"Mysuru, Karnataka","type":"Private","year":2004,"div":"yes","nirf25":89,"nirf24":90,"nirf23":91,"naac":"B","nba":null,"avg":400000,"med":500000,"eng":"NA","cg":"NA"},
+{"name":"Nilkamal School of Mathematics, Applied Statistics & Analytics","loc":"Mumbai, Maharashtra ","type":"Private","year":2007,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A++","nba":null,"avg":1100000,"med":1000000,"eng":"Medium","cg":"P1"},
+{"name":"Harcourt Butler Technical University, Kanpur","loc":"Kanpur","type":"State Public University","year":1921,"div":"No","nirf25":"201-300","nirf24":"-","nirf23":"-","naac":"A+","nba":100,"avg":950000,"med":800000,"eng":"Low","cg":"NA"},
+{"name":"JSS Academy of Technical Education, Noida","loc":"Noida","type":"Affiliated College","year":1998,"div":"No","nirf25":"201-300","nirf24":"201-300","nirf23":"-","naac":"N/A","nba":100,"avg":650000,"med":520000,"eng":null,"cg":"NA"},
+{"name":"Institute of Engineering and Technology, Lucknow","loc":"Lucknow","type":"Affiliated College","year":1984,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"N/A","nba":300,"avg":850000,"med":750000,"eng":null,"cg":"NA"},
+{"name":"University Institute of Engineering and Technology, Panjab University, Chandigarh","loc":"Chandigarh, Chandigarh","type":"State Public University","year":1882,"div":"No","nirf25":93,"nirf24":"101-150","nirf23":"101-150","naac":"A++","nba":null,"avg":1000000,"med":850000,"eng":null,"cg":"NA"},
+{"name":"Faculty of Technology and Engineering, The Maharaja Sayajirao University of Baroda","loc":"Baroda, Gujarat","type":"State Public University","year":1881,"div":null,"nirf25":"201-300","nirf24":"201-300","nirf23":"151-200","naac":"A+","nba":100,"avg":700000,"med":425000,"eng":null,"cg":"NA"},
+{"name":"Vishwakarma Government Engineering College, Ahmedabad","loc":"Ahmedabad, Gujarat","type":"Affiliated College","year":1994,"div":null,"nirf25":"-","nirf24":"-","nirf23":"-","naac":"N/A","nba":null,"avg":475000,"med":484999.99999999994,"eng":null,"cg":"NA"},
+{"name":"Pandit Deendayal Energy University, Gandhinagar","loc":"Gandhinagar, Gujarat","type":"State  University","year":2007,"div":null,"nirf25":98,"nirf24":"101-150","nirf23":"101-150","naac":"A++","nba":200,"avg":705000,"med":642000,"eng":null,"cg":"NA"},
+{"name":"Goa College of Engineering, Farmagudi, Ponda","loc":"Goa","type":"Affiliated College","year":1967,"div":null,"nirf25":"-","nirf24":"-","nirf23":"-","naac":"N/A","nba":null,"avg":600000,"med":425000,"eng":null,"cg":"NA"},
+{"name":"Kumaraguru College of Technology, Coimbatore","loc":"Coimbatore","type":"Affiliated College","year":1984,"div":"No","nirf25":"151-200","nirf24":"151-200","nirf23":"101-150","naac":"A++","nba":100,"avg":600000,"med":500000,"eng":null,"cg":"NA"},
+{"name":"Coimbatore Institute of Technology, Coimbatore","loc":"Coimbatore","type":"Affiliated College","year":1956,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"101-150","naac":"A","nba":100,"avg":800000,"med":680000,"eng":null,"cg":"NA"},
+{"name":"Thiagarajar College of Engineering, Madurai","loc":"Madurai","type":"Affiliated College","year":1957,"div":"No","nirf25":"101-150","nirf24":"101-150","nirf23":"101-150","naac":"A++","nba":100,"avg":850000,"med":745000,"eng":null,"cg":"NA"},
+{"name":"Bangalore Institute of Technology, Bengaluru","loc":"Bengaluru","type":"Affiliated College","year":1979,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A+","nba":null,"avg":1000000,"med":650000,"eng":null,"cg":"NA"},
+{"name":"Chaitanya Bharathi Institute of Technology, Hyderabad","loc":"Hyderabad, Telanga","type":"Autonomous College","year":1979,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":0,"nba":300,"avg":1200000,"med":800000,"eng":null,"cg":"NA"},
+{"name":"VNR Vignana Jyothi Institute of Engineering and Technology, Hyderabad","loc":"Hyderabad, Telanga","type":"Affiliated College","year":1995,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A++","nba":null,"avg":840000,"med":650000,"eng":null,"cg":"NA"},
+{"name":"Vasavi College of Engineering, Hyderabad","loc":"Hyderabad, Telanga","type":"Autonomous College","year":1981,"div":"No","nirf25":"-","nirf24":"201-300","nirf23":"-","naac":0,"nba":200,"avg":860000,"med":625000,"eng":null,"cg":"NA"},
+{"name":"Gokaraju Rangaraju Institute of Engineering and Technology, Hyderabad","loc":"Hyderabad, Telanga","type":"Affiliated College","year":1997,"div":"No","nirf25":"151-200","nirf24":"101-150","nirf23":"101-150","naac":"A++","nba":100,"avg":700000,"med":600000,"eng":null,"cg":"NA"},
+{"name":"Andhra University College of Engineering, Visakhapatnam","loc":"Visakhapatnam","type":"Constituent / University College","year":1955,"div":"No","nirf25":88,"nirf24":90,"nirf23":94,"naac":"N/A","nba":null,"avg":700000,"med":620000,"eng":null,"cg":"P2"},
+{"name":"Sri Venkateswara University College of Engineering, Tirupati","loc":"Tirupati","type":"Affiliated College","year":2007,"div":"No","nirf25":"201-300","nirf24":"201-300","nirf23":"-","naac":"N/A","nba":null,"avg":425000,"med":425000,"eng":null,"cg":"NA"},
+{"name":"Government Engineering College, Thrissur","loc":"Thrissur","type":"Affiliated College","year":1957,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"N/A","nba":null,"avg":608000,"med":500000,"eng":null,"cg":"NA"},
+{"name":"LBS INSTITUTE OF TECHNOLOGY FOR WOMEN","loc":"Kasaragod","type":"Affiliated College","year":1993,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"N/A","nba":200,"avg":800000,"med":700000,"eng":null,"cg":"NA"},
+{"name":"The LNM Institute of Information Technology, Jaipur (LNMIIT)","loc":"Jaipur","type":"Deemed to be University","year":2002,"div":"No","nirf25":"201-300","nirf24":"201-300","nirf23":"-","naac":"A","nba":"-","avg":1250000,"med":1100000,"eng":"Low","cg":"P1"},
+{"name":"MBM University, Jodhpur","loc":"Jodhpur","type":"State Public University","year":1951,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"-","nba":"-","avg":675000,"med":600000,"eng":"Low","cg":"NA"},
+{"name":"University Institute of Engineering and Technology, University of Jammu","loc":"Jammu","type":"State Public University","year":2017,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A++","nba":null,"avg":600000,"med":575000,"eng":null,"cg":"NA"}
+];
+
+/* ---- scoring sheet lookup tables ---- */
+const BEST_RANK = 1, WORST_RANK = 350;              // scoring!B2:B3
+const NIRF_W = { y2025: 0.5, y2024: 0.3, y2023: 0.2 }; // scoring!B4:B6
+const BAND = { b150: 125, b200: 175, b300: 250 };   // scoring!B12:B14
+const NAAC_TABLE = { "A++":100, "A+":90, "A":80, "B++":70, "B+":60, "B":50, "C":40, "D":20, "-":0 }; // scoring!E4:F12
+const NBA_MAX_POINTS = 25;                          // scoring!M2
+const NBA_PARTIAL = 150;                            // scoring!M4 (unrecognised text)
+const RAW_WEIGHTS = { salary:0.30, nirf:0.20, naac:0.20, nba:0.20, brand:0.15, cg:0.15 }; // scoring!B19:B25 (YOE 0.10 excluded)
+const WEIGHT_DEN = Object.values(RAW_WEIGHTS).reduce((a,b)=>a+b,0); // = 1.20; adjusted = raw / 1.20
+const ADJ = {}; for (const k in RAW_WEIGHTS) ADJ[k] = RAW_WEIGHTS[k]/WEIGHT_DEN;
+const ENG_BONUS = { "low":10, "medium":5, "high":2 };  // scoring!E19:F22
+const DIV_BONUS = { "yes":5, "no":0 };                 // scoring!E26:F27
+const CG_INDEX = { "P1":100, "P2":50 };                // scoring!A30:B32, else 0
+const STATE_ALIAS = { "tamil nadu":"Tamil Nadu","rajasthan":"Rajasthan","punjab":"Punjab",
+  "karnataka":"Karnataka","chandigarh":"Chandigarh","uttar pradesh":"Uttar Pradesh",
+  "haryana":"Haryana","maharashtra":"Maharashtra","chattisgarh":"Chhattisgarh",
+  "chhattisgarh":"Chhattisgarh","gujarat":"Gujarat","kerala":"Kerala",
+  "telanga":"Telangana","telangana":"Telangana","jharkhand":"Jharkhand",
+  "j&k":"Jammu & Kashmir","delhi":"Delhi" };            // scoring!R3:S19
+const STATE_ZONE = { "Tamil Nadu":"South","Rajasthan":"North","Punjab":"North","Karnataka":"South",
+  "Chandigarh":"North","Uttar Pradesh":"North","Haryana":"North","Maharashtra":"West",
+  "Chhattisgarh":"Central","Gujarat":"West","Kerala":"South","Telangana":"South",
+  "Jharkhand":"East","Jammu & Kashmir":"North","Delhi":"North" }; // scoring!U3:V17
+const LOC_OVERRIDE = { "new delhi":["New Delhi","Delhi"], "noida":["Noida","Uttar Pradesh"],
+  "jaipur":["Jaipur","Rajasthan"], "jodhpur":["Jodhpur","Rajasthan"],
+  "jammu":["Jammu","Jammu & Kashmir"] };               // scoring!X3:Z7
+
+/* ---- Brand Perception Working calibration block (K2:L10) & Config weights ---- */
+const BP = { A:132.5, B:14.2, RANK_FILL:250, SAL_FLOOR:400000, SAL_CAP:2000000,
+             SAL_MIN:30, VINT_YEARS:120, VINT_MIN:35, CUR_YEAR:2026 };
+const CONFIG_W = [20,15,15,15,20,15]; // Config!C3:C8 — EmpPref, EmpRep, Alumni, Placement, Talent, Media
+
+const isNum = v => typeof v === "number" && isFinite(v);
+const median3 = (a,b,c) => [a,b,c].sort((x,y)=>x-y)[1];
+/* Excel ROUND: half away from zero */
+const xlround = (x,d=1) => { const m = Math.pow(10,d), s = x*m;
+  return (s >= 0 ? Math.floor(s+0.5) : Math.ceil(s-0.5)) / m; };
+
+/* ---- NIRF Working: rank text/number -> numeric value used ---- */
+function rankUsed(v) {
+  if (isNum(v) && v > 0) return v;              // any positive number = actual rank (incl. >100)
+  if (typeof v === "string" && v.includes("-")) {
+    const lb = parseFloat(v.split("-")[0].trim());
+    if (!isFinite(lb)) return WORST_RANK;       // "-" alone -> unranked
+    return lb <= 150 ? BAND.b150 : lb <= 200 ? BAND.b200 : BAND.b300;
+  }
+  return WORST_RANK;                            // blank / other text -> unranked
+}
+function nirfIndex(c) {
+  const w = rankUsed(c.nirf25)*NIRF_W.y2025 + rankUsed(c.nirf24)*NIRF_W.y2024 + rankUsed(c.nirf23)*NIRF_W.y2023;
+  return (WORST_RANK - w) / (WORST_RANK - BEST_RANK) * 100;
+}
+
+/* ---- NAAC Working ---- */
+function naacIndex(c) {
+  if (c.naac === null || c.naac === undefined) return 0;
+  const key = String(c.naac).trim().toUpperCase();
+  for (const g in NAAC_TABLE) if (g.toUpperCase() === key) return NAAC_TABLE[g];
+  return 0;
+}
+
+/* ---- NBA Working (max NBA value computed over the college list, like scoring!M3) ---- */
+const NBA_MAXVAL = Math.max(...COLLEGES.map(c => isNum(c.nba) ? c.nba : -Infinity));
+function nbaPct(c) {
+  const v = c.nba;
+  let score;
+  if (isNum(v) && v > 0) score = Math.min(NBA_MAX_POINTS, v/NBA_MAXVAL*NBA_MAX_POINTS);
+  else if (isNum(v)) score = 0;
+  else if (v === null || v === "" || v === "-") score = 0;
+  else score = Math.min(NBA_MAX_POINTS, NBA_PARTIAL/NBA_MAXVAL*NBA_MAX_POINTS); // partial credit for text
+  return score/NBA_MAX_POINTS*100;
+}
+
+/* ---- Salary Working (max median computed over the list) ---- */
+const MAX_MED = Math.max(...COLLEGES.map(c => isNum(c.med) ? c.med : -Infinity));
+const salIndex = c => isNum(c.med) ? c.med/MAX_MED*100 : 0;
+
+/* ---- Location Working ---- */
+function resolveLocation(c) {
+  const raw = c.loc || "";
+  let p1, p2;
+  const comma = raw.indexOf(",");
+  if (comma >= 0) { p1 = raw.slice(0, comma).trim(); p2 = raw.slice(comma+1, comma+101).trim(); }
+  else { p1 = raw.trim(); p2 = ""; }
+  const e = Object.prototype.hasOwnProperty.call(STATE_ALIAS, p1.toLowerCase());
+  const f = Object.prototype.hasOwnProperty.call(STATE_ALIAS, p2.toLowerCase());
+  let city, state;
+  if (e)      { city = p2; state = STATE_ALIAS[p1.toLowerCase()]; }
+  else if (f) { city = p1; state = STATE_ALIAS[p2.toLowerCase()]; }
+  else {
+    const ov = LOC_OVERRIDE[raw.trim().toLowerCase()];
+    if (ov) { city = ov[0]; state = ov[1]; }
+    else    { city = p1; state = "Unknown"; }
+  }
+  return { city, state, zone: STATE_ZONE[state] || "Unknown" };
+}
+
+/* ---- Brand Perception Working ----
+   WORKBOOK QUIRK preserved: the row for RV College of Engineering (sheet row 16)
+   was hand-edited to pull its salary proxy from College list column N (MEDIAN
+   salary) instead of column M (average salary) like every other row. */
+function bpRankNum(v) {
+  if (v === null || v === undefined || v === "") return BP.RANK_FILL;
+  if (isNum(v)) return v;
+  const s = String(v);
+  if (s.includes("-")) {
+    const parts = s.split("-");
+    const lb = parseFloat(parts[0].trim()), ub = parseFloat(parts[1].trim());
+    if (isFinite(lb) && isFinite(ub)) return (lb+ub)/2;
+  }
+  return BP.RANK_FILL;
+}
+function bpScores(c) {
+  const n = median3(0, BP.A - BP.B*Math.log(bpRankNum(c.nirf25)), 100);
+  const salSrc = c.name.startsWith("RV College of Engineering") ? c.med : c.avg; // quirk
+  const o = isNum(salSrc) ? salSrc : BP.SAL_FLOOR;
+  const p = median3(BP.SAL_MIN, BP.SAL_MIN + (100-BP.SAL_MIN)*(o-BP.SAL_FLOOR)/(BP.SAL_CAP-BP.SAL_FLOOR), 100);
+  const q = isNum(c.year)
+    ? median3(BP.VINT_MIN, BP.VINT_MIN + (100-BP.VINT_MIN)*(BP.CUR_YEAR-c.year)/BP.VINT_YEARS, 100)
+    : BP.VINT_MIN;
+  const sub = {
+    empPref:   xlround(0.6*n + 0.4*p),
+    empRep:    xlround(n),
+    alumni:    xlround(0.5*q + 0.5*n),
+    placement: xlround(p),
+    talent:    xlround(0.6*n + 0.4*p),
+    media:     xlround(Math.min(100, 30 + 0.55*n)),
+  };
+  const vals = Object.values(sub);
+  sub.index = xlround(vals.reduce((a,v,i)=>a+v*CONFIG_W[i],0) / CONFIG_W.reduce((a,b)=>a+b,0));
+  return sub;
+}
+/* WORKBOOK QUIRK preserved: Final Rankings' "Brand Perception Index" column pulls
+   Brand Perception Working column F — the TALENT QUALITY sub-score — not column H
+   (the actual composite Brand Perception Index). Its lookup range also starts at
+   sheet row 5, but the first college (Amrita) sits at row 4 (a deleted row shifted
+   the sheet), so Amrita's lookup fails and it contributes 0 to the core score. */
+function bpForRanking(i, c) {
+  const bpSheetRow = i < 5 ? i + 4 : i + 5; // row 9 is the dead #REF! row
+  if (bpSheetRow < 5) return null;          // outside A5:A200 -> lookup fails -> ""
+  return bpScores(c).talent;                // column F = Talent Quality
+}
+
+/* ---- Final Rankings assembly ---- */
+function computeAll(engOn, divOn) {
+  const rows = COLLEGES.map((c, i) => {
+    const loc = resolveLocation(c);
+    const sal = salIndex(c), nirf = nirfIndex(c), naac = naacIndex(c), nba = nbaPct(c);
+    const bp = bpForRanking(i, c);
+    const cgi = CG_INDEX[String(c.cg || "").trim().toUpperCase()] || 0;
+    const core = sal*ADJ.salary + nirf*ADJ.nirf + naac*ADJ.naac + nba*ADJ.nba
+               + (bp === null ? 0 : bp)*ADJ.brand + cgi*ADJ.cg;
+    const engb = ENG_BONUS[String(c.eng || "").trim().toLowerCase()] ?? 0;
+    const divb = DIV_BONUS[String(c.div || "").trim().toLowerCase()] ?? 0;
+    const total = core + (engOn ? engb : 0) + (divOn ? divb : 0);
+    return { i, name: c.name, city: loc.city, state: loc.state, zone: loc.zone,
+             sal, nirf, naac, nba, bp, cgi, core, engb, divb, total, cg: c.cg, raw: c };
+  });
+  for (const r of rows) { // RANK.EQ, descending, over all colleges
+    r.prank = 1 + rows.filter(o => o.total > r.total).length;
+    r.brank = 1 + rows.filter(o => o.core > r.core).length;
+  }
+  return rows;
+}
+const cgKey = cg => cg === "P1" ? 1 : cg === "P2" ? 2 : 3;
+/* Dashboard-sheet ordering: CG priority group asc, then Total desc (stable) */
+function dashSort(rows) {
+  return rows.slice().sort((a,b) => cgKey(a.cg)-cgKey(b.cg) || b.total-a.total || a.i-b.i);
+}
+if (typeof module !== "undefined") module.exports = { COLLEGES, computeAll, dashSort, bpScores, ADJ };
+</script>
+<!-- MODEL_END -->
+
+<script>
+"use strict";
+const fmt2 = v => v === null || v === "" ? "—" : (Math.round(v*100)/100).toFixed(2);
+const fmt1 = v => v === null || v === "" ? "—" : v.toFixed(1);
+const esc = s => String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const inr = v => "₹" + Number(v).toLocaleString("en-IN");
+
+const COLS = [
+  { key:"rank",  label:"Rank",  num:true },
+  { key:"name",  label:"College" },
+  { key:"city",  label:"City" },
+  { key:"state", label:"State" },
+  { key:"zone",  label:"Zone" },
+  { key:"cg",    label:"CG Priority" },
+  { key:"core",  label:"Weighted Core", num:true },
+  { key:"total", label:"Total Priority", num:true },
+  { key:"prank", label:"Priority Rank (RANK.EQ)", num:true },
+];
+let sortState = null;        // null = workbook order; else {key, dir}
+let openRow = null;          // college index of the open breakdown
+const els = {
+  eng: document.getElementById("engToggle"), div: document.getElementById("divToggle"),
+  zone: document.getElementById("zoneSel"), cg: document.getElementById("cgSel"),
+  search: document.getElementById("search"), count: document.getElementById("count"),
+  tbody: document.getElementById("tbody"), headrow: document.getElementById("headrow"),
+};
+
+function populateFilters() {
+  const rows = computeAll(true, false);
+  const zones = [...new Set(rows.map(r => r.zone))]
+    .sort((a,b) => (a==="Unknown")-(b==="Unknown") || a.localeCompare(b));
+  for (const z of zones) els.zone.add(new Option(z));
+  for (const g of [...new Set(COLLEGES.map(c => c.cg))].sort()) els.cg.add(new Option(g));
+}
+
+function buildHead() {
+  els.headrow.innerHTML = COLS.map(c => {
+    const dir = sortState && sortState.key === c.key ? (sortState.dir === 1 ? " <span class='dir'>▲</span>" : " <span class='dir'>▼</span>") : "";
+    return `<th class="${c.num ? "num" : ""}" data-key="${c.key}" title="Click to sort">${c.label}${dir}</th>`;
+  }).join("");
+}
+
+function currentRows() {
+  const rows = computeAll(els.eng.checked, els.div.checked);
+  const ordered = dashSort(rows);
+  ordered.forEach((r, k) => r.rank = k + 1); // Dashboard SEQUENCE rank, pre-filter
+  let view = ordered.filter(r =>
+    (els.zone.value === "All" || r.zone === els.zone.value) &&
+    (els.cg.value === "All" || r.cg === els.cg.value));
+  // Excel's Dashboard ranks the *filtered* view 1..N — renumber like the sheet does
+  view.forEach((r, k) => r.rank = k + 1);
+  const q = els.search.value.trim().toLowerCase();
+  if (q) view = view.filter(r =>
+    r.name.toLowerCase().includes(q) || r.city.toLowerCase().includes(q) || r.state.toLowerCase().includes(q));
+  if (sortState) {
+    const { key, dir } = sortState;
+    const numeric = COLS.find(c => c.key === key).num;
+    view = view.slice().sort((a,b) => numeric
+      ? dir * (a[key] - b[key])
+      : dir * String(a[key]).localeCompare(String(b[key])));
+  }
+  return view;
+}
+
+function detailHTML(r) {
+  const c = r.raw;
+  const bpAll = bpScores(c);
+  const rv = c.name.startsWith("RV College of Engineering");
+  const first = r.i === 0;
+  const comps = [
+    ["Salary Index", r.sal, ADJ.salary],
+    ["NIRF Index", r.nirf, ADJ.nirf],
+    ["NAAC Index", r.naac, ADJ.naac],
+    ["NBA Score %", r.nba, ADJ.nba],
+    ["Brand Perception", r.bp === null ? 0 : r.bp, ADJ.brand],
+    ["CG Priority Index", r.cgi, ADJ.cg],
+  ];
+  const compHTML = comps.map(([lbl, v, w]) => `
+    <div class="comp"><div class="lbl"><span>${lbl} × ${(w*100).toFixed(2)}%</span>
+    <b>${fmt2(v)} → ${fmt2(v*w)}</b></div>
+    <div class="trackbar"><div class="fill" style="width:${Math.max(0,Math.min(100,v))}%"></div></div></div>`).join("");
+  const ranks = [["2025", c.nirf25, rankUsed(c.nirf25)], ["2024", c.nirf24, rankUsed(c.nirf24)], ["2023", c.nirf23, rankUsed(c.nirf23)]];
+  const engOn = els.eng.checked, divOn = els.div.checked;
+  return `<div class="detail-inner">
+    <div class="card"><h3>Profile</h3>
+      <div class="kv"><span class="k">Location (raw)</span><span class="v">${esc(c.loc)}</span></div>
+      <div class="kv"><span class="k">Resolved</span><span class="v">${esc(r.city)}, ${esc(r.state)} · ${esc(r.zone)} zone</span></div>
+      <div class="kv"><span class="k">Type</span><span class="v">${esc(c.type || "—")}</span></div>
+      <div class="kv"><span class="k">Established</span><span class="v">${c.year ?? "—"}</span></div>
+      <div class="kv"><span class="k">Median / Average salary</span><span class="v">${inr(c.med)} / ${inr(c.avg)}</span></div>
+      <div class="kv"><span class="k">Engagement status</span><span class="v">${esc(c.eng ?? "—")}</span></div>
+      <div class="kv"><span class="k">Diversity</span><span class="v">${esc(c.div ?? "—")}</span></div>
+      <div class="kv"><span class="k">CG Priority</span><span class="v">${esc(c.cg)} → index ${r.cgi}</span></div>
+    </div>
+    <div class="card"><h3>Index inputs</h3>
+      ${ranks.map(([y, raw, used]) => `<div class="kv"><span class="k">NIRF ${y}</span><span class="v">${esc(raw ?? "—")} → ${used}</span></div>`).join("")}
+      <div class="kv"><span class="k">Weighted rank (0.5/0.3/0.2)</span><span class="v">${fmt2(rankUsed(c.nirf25)*0.5 + rankUsed(c.nirf24)*0.3 + rankUsed(c.nirf23)*0.2)}</span></div>
+      <div class="kv"><span class="k">NIRF Index</span><span class="v">${fmt2(r.nirf)}</span></div>
+      <div class="kv"><span class="k">NAAC grade</span><span class="v">${esc(c.naac ?? "—")} → ${fmt2(r.naac)}</span></div>
+      <div class="kv"><span class="k">NBA value</span><span class="v">${esc(c.nba ?? "—")} → ${fmt2(r.nba)}%</span></div>
+      <div class="kv"><span class="k">Salary Index (median ÷ ₹18.5L max)</span><span class="v">${fmt2(r.sal)}</span></div>
+    </div>
+    <div class="card"><h3>Brand Perception (working sheet)</h3>
+      <div class="kv"><span class="k">Employer Preference</span><span class="v">${fmt1(bpAll.empPref)}</span></div>
+      <div class="kv"><span class="k">Employer Reputation</span><span class="v">${fmt1(bpAll.empRep)}</span></div>
+      <div class="kv"><span class="k">Alumni Network</span><span class="v">${fmt1(bpAll.alumni)}</span></div>
+      <div class="kv"><span class="k">Placement Outcomes</span><span class="v">${fmt1(bpAll.placement)}</span></div>
+      <div class="kv"><span class="k">Talent Quality</span><span class="v">${fmt1(bpAll.talent)}</span></div>
+      <div class="kv"><span class="k">Media Visibility</span><span class="v">${fmt1(bpAll.media)}</span></div>
+      <div class="kv"><span class="k">Composite index (col H, unused)</span><span class="v">${fmt1(bpAll.index)}</span></div>
+      <div class="kv total"><span class="k">Used in core score (col F quirk)</span><span class="v">${r.bp === null ? "— (excluded)" : fmt1(r.bp)}</span></div>
+      ${first ? `<p class="note">Workbook quirk: this college sits at row 4 of the Brand Perception sheet, above the lookup range (A5:A200), so the workbook scores its brand as 0.</p>` : ""}
+      ${rv ? `<p class="note">Workbook quirk: this row's salary proxy was hand-edited to use the <em>median</em> salary column instead of the <em>average</em> used everywhere else.</p>` : ""}
+      <p class="note">The workbook's "Brand Perception Index" column actually pulls the Talent Quality sub-score (column F), not the composite (column H). Preserved as-is.</p>
+    </div>
+    <div class="card"><h3>Score assembly</h3>
+      ${compHTML}
+      <div class="kv total"><span class="k">Weighted Core Score</span><span class="v">${fmt2(r.core)}</span></div>
+      <div class="kv ${engOn ? "" : "off"}"><span class="k">Engagement bonus (${esc(c.eng ?? "—")})${engOn ? "" : " — toggled off"}</span><span class="v">+${engOn ? r.engb : 0}</span></div>
+      <div class="kv ${divOn ? "" : "off"}"><span class="k">Diversity bonus (${esc(c.div ?? "—")})${divOn ? "" : " — toggled off"}</span><span class="v">+${divOn ? r.divb : 0}</span></div>
+      <div class="kv total"><span class="k">Total Priority Score</span><span class="v">${fmt2(r.total)}</span></div>
+      <div class="kv"><span class="k">Priority Rank (RANK.EQ on total)</span><span class="v">${r.prank}</span></div>
+      <div class="kv"><span class="k">Base Rank (core only)</span><span class="v">${r.brank}</span></div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  buildHead();
+  const view = currentRows();
+  els.count.textContent = `${view.length} of ${COLLEGES.length} colleges`;
+  if (!view.length) {
+    els.tbody.innerHTML = `<tr><td colspan="${COLS.length}"><div class="empty">No colleges match this filter</div></td></tr>`;
+    return;
+  }
+  els.tbody.innerHTML = view.map(r => `
+    <tr class="data ${openRow === r.i ? "open" : ""}" data-i="${r.i}">
+      <td class="num">${r.rank}</td>
+      <td class="college">${esc(r.name)}</td>
+      <td>${esc(r.city)}</td><td>${esc(r.state)}</td><td>${esc(r.zone)}</td>
+      <td><span class="chip ${esc(r.cg)}">${esc(r.cg)}</span></td>
+      <td class="num">${fmt2(r.core)}</td>
+      <td class="num"><b>${fmt2(r.total)}</b></td>
+      <td class="num">${r.prank}</td>
+    </tr>
+    ${openRow === r.i ? `<tr class="detail"><td colspan="${COLS.length}">${detailHTML(r)}</td></tr>` : ""}
+  `).join("");
+}
+
+els.headrow.addEventListener("click", e => {
+  const th = e.target.closest("th"); if (!th) return;
+  const key = th.dataset.key;
+  // scores sort desc first; ranks and text asc first; click cycle: sort -> reverse -> workbook order
+  const initialDir = (key === "core" || key === "total") ? -1 : 1;
+  if (!sortState || sortState.key !== key) sortState = { key, dir: initialDir };
+  else if (sortState.dir === initialDir) sortState.dir = -initialDir;
+  else sortState = null;
+  render();
+});
+els.tbody.addEventListener("click", e => {
+  const tr = e.target.closest("tr.data"); if (!tr) return;
+  const i = Number(tr.dataset.i);
+  openRow = openRow === i ? null : i;
+  render();
+});
+for (const el of [els.eng, els.div, els.zone, els.cg]) el.addEventListener("change", render);
+els.search.addEventListener("input", render);
+
+populateFilters();
+render();
+</script>
+</body>
+</html>
