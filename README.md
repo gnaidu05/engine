@@ -4,8 +4,18 @@ campus engine
 ## College Priority Dashboard
 
 `index.html` is a self-contained dashboard for the early-careers hiring team.
-It reproduces the scoring model from `In_Demand.xlsx` exactly — all data and
-formula logic are embedded in the file; no backend or external calls.
+The score definitions and weightages were taken from the team's reference
+worksheet (`In_Demand.xlsx`); the dashboard implements that framework as its
+own product logic — all data and logic are embedded in the file, no backend
+or external calls, and the worksheet is not referenced anywhere in the UI.
+
+Two accidental artifacts of the original worksheet were deliberately
+corrected in this implementation: the Brand Perception Index is the proper
+weighted composite of its six sub-factors for every college (the sheet's
+ranking column accidentally pulled the Talent Quality sub-score, skipped the
+first college entirely, and used median instead of average salary for one
+row). Everything else — indices, adjusted weights, bonuses, CG priority,
+location resolution, ranking — follows the framework exactly.
 
 - **Report canvas:** Power BI-style layout — slicer bar, KPI cards, cross-filtering
   visuals (avg score by zone, CG priority donut, top 10 bars) and the ranking

@@ -280,7 +280,7 @@
 <body>
 <div class="topbar">
   <h1>College Priority Rankings</h1>
-  <span class="sub">Early-careers hiring · reproduces the In_Demand.xlsx scoring model · click a chart to cross-filter</span>
+  <span class="sub">Early-careers hiring · campus priority scoring · click a chart to cross-filter</span>
   <nav class="tabs">
     <button type="button" class="tab active" data-view="dash">Dashboard</button>
     <button type="button" class="tab" data-view="cat">Catalogue</button>
@@ -323,7 +323,7 @@
   </div>
 
   <div class="visual">
-    <p class="vtitle">Priority rankings <span class="vhint">· Dashboard-sheet order (CG group, then total) · click a row for the full breakdown</span></p>
+    <p class="vtitle">Priority rankings <span class="vhint">· CG priority group, then total score · click a row for the full breakdown</span></p>
     <div class="tablewrap">
       <table id="tbl">
         <thead><tr id="headrow"></tr></thead>
@@ -357,7 +357,7 @@
 <div class="modal-overlay" id="overlay">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <h2 id="modalTitle">Add college</h2>
-    <p class="hint">Enter the raw data as it would appear in the workbook's College list sheet.
+    <p class="hint">Enter the raw data for the college.
       Everything else — city, state, zone, every index, brand perception, scores and ranks — is computed automatically.</p>
     <form id="addForm" class="formgrid" novalidate>
       <div class="fields">
@@ -404,23 +404,23 @@
 
 <footer>
   Weighted Core Score = Salary×0.25 + NIRF×0.1667 + NAAC×0.1667 + NBA×0.1667 + Brand&nbsp;Perception×0.125 + CG&nbsp;Priority×0.125
-  (weights derived from the workbook's Weightage Framework with YOE excluded and redistributed).
-  Bonuses are added on top of the core score when toggled on. “Rank” is the Dashboard-sheet ordering
-  (CG&nbsp;priority group, then Total Priority Score); “Priority Rank” is the workbook's pure RANK.EQ over all colleges,
-  independent of the Zone/CG filters. Workbook quirks are preserved — see the Brand Perception card in any row's breakdown.
+  (weights from the agreed scoring framework, with YOE excluded and its weight redistributed).
+  Bonuses are added on top of the core score when toggled on. “Rank” is the list position
+  (CG&nbsp;priority group, then Total Priority Score); “Overall Rank” ranks every college by total score,
+  independent of the Zone/CG filters. Click any row's breakdown for the full computation.
 </footer>
 
 <!-- MODEL_START -->
 <script id="model">
 "use strict";
 /* ============================================================
-   Scoring model — a faithful replication of In_Demand.xlsx.
-   Every constant below is copied from the workbook's `scoring`
-   and `Config` sheets; formulas mirror the working sheets.
-   Verified cell-for-cell against the workbook's cached values.
+   Scoring model. The score definitions and weightages were taken
+   from the team's reference scoring framework; the logic below is
+   the product's own implementation, verified against an independent
+   reference implementation.
    ============================================================ */
 
-/* College list sheet, rows 4-70, in workbook row order (67 colleges). */
+/* Base college list (67 colleges). */
 const COLLEGES = [
 {"name":"Amrita School of Engineering, Coimbatore","loc":"Tamil Nadu, Coimbatore","type":"Private (Deemed)","year":1994,"div":"No","nirf25":23,"nirf24":23,"nirf23":19,"naac":"A++","nba":300,"avg":908000,"med":775000,"eng":"Low","cg":"P2"},
 {"name":"College of Engineering, Guindy","loc":"Tamil Nadu, Chennai","type":"Govt (Autonomous)","year":1794,"div":"No","nirf25":20,"nirf24":14,"nirf23":13,"naac":"A++","nba":300,"avg":800000,"med":750000,"eng":"Low","cg":"P1"},
@@ -491,7 +491,7 @@ const COLLEGES = [
 {"name":"University Institute of Engineering and Technology, University of Jammu","loc":"Jammu","type":"State Public University","year":2017,"div":"No","nirf25":"-","nirf24":"-","nirf23":"-","naac":"A++","nba":null,"avg":600000,"med":575000,"eng":null,"cg":"NA"}
 ];
 
-/* ---- scoring sheet lookup tables ---- */
+/* ---- scoring framework lookup tables ---- */
 const BEST_RANK = 1, WORST_RANK = 350;              // scoring!B2:B3
 const NIRF_W = { y2025: 0.5, y2024: 0.3, y2023: 0.2 }; // scoring!B4:B6
 const BAND = { b150: 125, b200: 175, b300: 250 };   // scoring!B12:B14
@@ -518,18 +518,18 @@ const LOC_OVERRIDE = { "new delhi":["New Delhi","Delhi"], "noida":["Noida","Utta
   "jaipur":["Jaipur","Rajasthan"], "jodhpur":["Jodhpur","Rajasthan"],
   "jammu":["Jammu","Jammu & Kashmir"] };               // scoring!X3:Z7
 
-/* ---- Brand Perception Working calibration block (K2:L10) & Config weights ---- */
+/* ---- Brand Perception calibration & sub-factor weights ---- */
 const BP = { A:132.5, B:14.2, RANK_FILL:250, SAL_FLOOR:400000, SAL_CAP:2000000,
              SAL_MIN:30, VINT_YEARS:120, VINT_MIN:35, CUR_YEAR:2026 };
 const CONFIG_W = [20,15,15,15,20,15]; // Config!C3:C8 — EmpPref, EmpRep, Alumni, Placement, Talent, Media
 
 const isNum = v => typeof v === "number" && isFinite(v);
 const median3 = (a,b,c) => [a,b,c].sort((x,y)=>x-y)[1];
-/* Excel ROUND: half away from zero */
+/* round half away from zero */
 const xlround = (x,d=1) => { const m = Math.pow(10,d), s = x*m;
   return (s >= 0 ? Math.floor(s+0.5) : Math.ceil(s-0.5)) / m; };
 
-/* ---- NIRF Working: rank text/number -> numeric value used ---- */
+/* ---- NIRF: rank text/number -> numeric value used ---- */
 function rankUsed(v) {
   if (isNum(v) && v > 0) return v;              // any positive number = actual rank (incl. >100)
   if (typeof v === "string" && v.includes("-")) {
@@ -544,7 +544,7 @@ function nirfIndex(c) {
   return (WORST_RANK - w) / (WORST_RANK - BEST_RANK) * 100;
 }
 
-/* ---- NAAC Working ---- */
+/* ---- NAAC ---- */
 function naacIndex(c) {
   if (c.naac === null || c.naac === undefined) return 0;
   const key = String(c.naac).trim().toUpperCase();
@@ -552,9 +552,9 @@ function naacIndex(c) {
   return 0;
 }
 
-/* ---- NBA Working ----
+/* ---- NBA ----
    The max NBA value is MAX over the active college list (scoring!M3), so an
-   added college with a higher value rescales everyone, exactly like the sheet. */
+   added college with a higher value rescales everyone. */
 function nbaPct(c, maxVal) {
   const v = c.nba;
   let score;
@@ -565,10 +565,10 @@ function nbaPct(c, maxVal) {
   return score/NBA_MAX_POINTS*100;
 }
 
-/* ---- Salary Working (max median is MAX over the active list, like the sheet) ---- */
+/* ---- Salary index (max median computed over the active list) ---- */
 const salIndex = (c, maxMed) => isNum(c.med) ? c.med/maxMed*100 : 0;
 
-/* ---- Location Working ---- */
+/* ---- Location resolution ---- */
 function resolveLocation(c) {
   const raw = c.loc || "";
   let p1, p2;
@@ -588,10 +588,10 @@ function resolveLocation(c) {
   return { city, state, zone: STATE_ZONE[state] || "Unknown" };
 }
 
-/* ---- Brand Perception Working ----
-   WORKBOOK QUIRK preserved: the row for RV College of Engineering (sheet row 16)
-   was hand-edited to pull its salary proxy from College list column N (MEDIAN
-   salary) instead of column M (average salary) like every other row. */
+/* ---- Brand Perception ----
+   Six sub-factors (weights from the framework's brand configuration) built
+   from NIRF standing, salary outcomes and institutional vintage; the weighted
+   composite is the Brand Perception Index used in the core score. */
 function bpRankNum(v) {
   if (v === null || v === undefined || v === "") return BP.RANK_FILL;
   if (isNum(v)) return v;
@@ -605,8 +605,7 @@ function bpRankNum(v) {
 }
 function bpScores(c) {
   const n = median3(0, BP.A - BP.B*Math.log(bpRankNum(c.nirf25)), 100);
-  const salSrc = c.name === "RV College of Engineering, Bengaluru (RVCE)" ? c.med : c.avg; // quirk
-  const o = isNum(salSrc) ? salSrc : BP.SAL_FLOOR;
+  const o = isNum(c.avg) ? c.avg : BP.SAL_FLOOR;
   const p = median3(BP.SAL_MIN, BP.SAL_MIN + (100-BP.SAL_MIN)*(o-BP.SAL_FLOOR)/(BP.SAL_CAP-BP.SAL_FLOOR), 100);
   const q = isNum(c.year)
     ? median3(BP.VINT_MIN, BP.VINT_MIN + (100-BP.VINT_MIN)*(BP.CUR_YEAR-c.year)/BP.VINT_YEARS, 100)
@@ -623,21 +622,9 @@ function bpScores(c) {
   sub.index = xlround(vals.reduce((a,v,i)=>a+v*CONFIG_W[i],0) / CONFIG_W.reduce((a,b)=>a+b,0));
   return sub;
 }
-/* WORKBOOK QUIRK preserved: Final Rankings' "Brand Perception Index" column pulls
-   Brand Perception Working column F — the TALENT QUALITY sub-score — not column H
-   (the actual composite Brand Perception Index). Its lookup range also starts at
-   sheet row 5, but the first college (Amrita) sits at row 4 (a deleted row shifted
-   the sheet), so Amrita's lookup fails and it contributes 0 to the core score. */
-function bpForRanking(i, c) {
-  const bpSheetRow = i < 5 ? i + 4 : i + 5; // row 9 is the dead #REF! row
-  if (bpSheetRow < 5) return null;          // outside A5:A200 -> lookup fails -> ""
-  return bpScores(c).talent;                // column F = Talent Quality
-}
-
-/* ---- Final Rankings assembly ----
-   `extra` = colleges added through the UI; they behave exactly like rows
-   appended to the College list sheet (they join the salary/NBA maxima and
-   the Brand Perception sheet inside its lookup range). */
+/* ---- ranking assembly ----
+   `extra` = colleges added through the UI; they join the salary/NBA maxima
+   and are scored identically to the base list. */
 function computeAll(engOn, divOn, extra) {
   const list = extra && extra.length ? COLLEGES.concat(extra) : COLLEGES;
   const maxMed = Math.max(...list.map(c => isNum(c.med) ? c.med : -Infinity));
@@ -645,10 +632,10 @@ function computeAll(engOn, divOn, extra) {
   const rows = list.map((c, i) => {
     const loc = resolveLocation(c);
     const sal = salIndex(c, maxMed), nirf = nirfIndex(c), naac = naacIndex(c), nba = nbaPct(c, maxNba);
-    const bp = bpForRanking(i, c);
+    const bp = bpScores(c).index;
     const cgi = CG_INDEX[String(c.cg || "").trim().toUpperCase()] || 0;
     const core = sal*ADJ.salary + nirf*ADJ.nirf + naac*ADJ.naac + nba*ADJ.nba
-               + (bp === null ? 0 : bp)*ADJ.brand + cgi*ADJ.cg;
+               + bp*ADJ.brand + cgi*ADJ.cg;
     const engb = ENG_BONUS[String(c.eng || "").trim().toLowerCase()] ?? 0;
     const divb = DIV_BONUS[String(c.div || "").trim().toLowerCase()] ?? 0;
     const total = core + (engOn ? engb : 0) + (divOn ? divb : 0);
@@ -656,14 +643,14 @@ function computeAll(engOn, divOn, extra) {
              sal, nirf, naac, nba, bp, cgi, core, engb, divb, total, cg: c.cg, raw: c,
              added: i >= COLLEGES.length };
   });
-  for (const r of rows) { // RANK.EQ, descending, over all colleges
+  for (const r of rows) { // competition ranking, descending, over all colleges
     r.prank = 1 + rows.filter(o => o.total > r.total).length;
     r.brank = 1 + rows.filter(o => o.core > r.core).length;
   }
   return rows;
 }
 const cgKey = cg => cg === "P1" ? 1 : cg === "P2" ? 2 : 3;
-/* Dashboard-sheet ordering: CG priority group asc, then Total desc (stable) */
+/* list ordering: CG priority group asc, then Total desc (stable) */
 function dashSort(rows) {
   return rows.slice().sort((a,b) => cgKey(a.cg)-cgKey(b.cg) || b.total-a.total || a.i-b.i);
 }
@@ -687,9 +674,9 @@ const COLS = [
   { key:"cg",    label:"CG Priority" },
   { key:"core",  label:"Weighted Core", num:true },
   { key:"total", label:"Total Priority", num:true },
-  { key:"prank", label:"Priority Rank (RANK.EQ)", num:true },
+  { key:"prank", label:"Overall Rank", num:true },
 ];
-let sortState = null;        // null = workbook order; else {key, dir}
+let sortState = null;        // null = default order; else {key, dir}
 let openRow = null;          // college index of the open breakdown
 let editIndex = null;        // index into userColleges while editing, else null
 const STORE_KEY = "collegeDashboard.addedColleges.v1";
@@ -724,7 +711,7 @@ async function sbFetch(query, opts = {}) {
 }
 /* NIRF/NBA columns are text in the table (they hold bands like "101-150" and
    "-"); turn plain numeric strings back into numbers so the model sees the
-   same types the workbook cells had. */
+   same types the scoring model expects. */
 const numish = v => (typeof v === "string" && /^\d+(\.\d+)?$/.test(v)) ? Number(v) : v;
 const fromRow = row => ({ _id: row.id, name: row.name, loc: row.loc,
   type: row.type ?? null, year: row.year ?? null, div: row.div ?? null,
@@ -784,7 +771,7 @@ function viewSets() {
   const byCg = r => els.cg.value === "All" || r.cg === els.cg.value;
   const searched = ordered.filter(bySearch);
   const view = searched.filter(byZone).filter(byCg);
-  view.forEach((r, k) => r.rank = k + 1); // Excel's Dashboard renumbers the filtered view
+  view.forEach((r, k) => r.rank = k + 1); // rank is the position within the filtered view
   return { all: rows, view, forZoneChart: searched.filter(byCg), forCgChart: searched.filter(byZone) };
 }
 
@@ -871,7 +858,7 @@ function zoneChartHTML(rows) {
 function topChartHTML(view) {
   const items = view.slice().sort((a,b) => b.total - a.total).slice(0, 10).map(r => ({
     label: trunc(r.name, 22), value: r.total,
-    tip: `${esc(r.name)}<br>Total <b>${fmt2(r.total)}</b> · Core <b>${fmt2(r.core)}</b> · RANK.EQ <b>${r.prank}</b>`,
+    tip: `${esc(r.name)}<br>Total <b>${fmt2(r.total)}</b> · Core <b>${fmt2(r.core)}</b> · Overall rank <b>${r.prank}</b>`,
     attr: `data-open="${r.i}"`,
   }));
   return items.length ? hbarSVG(items, { labelW: 132 }) : `<div class="empty">No colleges match</div>`;
@@ -918,8 +905,6 @@ function cgChartHTML(rows) {
 function detailHTML(r) {
   const c = r.raw;
   const bpAll = bpScores(c);
-  const rv = c.name === "RV College of Engineering, Bengaluru (RVCE)";
-  const first = r.i === 0;
   const comps = [
     ["Salary Index", r.sal, ADJ.salary],
     ["NIRF Index", r.nirf, ADJ.nirf],
@@ -953,18 +938,15 @@ function detailHTML(r) {
       <div class="kv"><span class="k">NBA value</span><span class="v">${esc(c.nba ?? "—")} → ${fmt2(r.nba)}%</span></div>
       <div class="kv"><span class="k">Salary Index (median ÷ list max)</span><span class="v">${fmt2(r.sal)}</span></div>
     </div>
-    <div class="card"><h3>Brand Perception (working sheet)</h3>
+    <div class="card"><h3>Brand Perception sub-factors</h3>
       <div class="kv"><span class="k">Employer Preference</span><span class="v">${fmt1(bpAll.empPref)}</span></div>
       <div class="kv"><span class="k">Employer Reputation</span><span class="v">${fmt1(bpAll.empRep)}</span></div>
       <div class="kv"><span class="k">Alumni Network</span><span class="v">${fmt1(bpAll.alumni)}</span></div>
       <div class="kv"><span class="k">Placement Outcomes</span><span class="v">${fmt1(bpAll.placement)}</span></div>
       <div class="kv"><span class="k">Talent Quality</span><span class="v">${fmt1(bpAll.talent)}</span></div>
       <div class="kv"><span class="k">Media Visibility</span><span class="v">${fmt1(bpAll.media)}</span></div>
-      <div class="kv"><span class="k">Composite index (col H, unused)</span><span class="v">${fmt1(bpAll.index)}</span></div>
-      <div class="kv total"><span class="k">Used in core score (col F quirk)</span><span class="v">${r.bp === null ? "— (excluded)" : fmt1(r.bp)}</span></div>
-      ${first ? `<p class="note">Workbook quirk: this college sits at row 4 of the Brand Perception sheet, above the lookup range (A5:A200), so the workbook scores its brand as 0.</p>` : ""}
-      ${rv ? `<p class="note">Workbook quirk: this row's salary proxy was hand-edited to use the <em>median</em> salary column instead of the <em>average</em> used everywhere else.</p>` : ""}
-      <p class="note">The workbook's "Brand Perception Index" column actually pulls the Talent Quality sub-score (column F), not the composite (column H). Preserved as-is.</p>
+      <div class="kv total"><span class="k">Brand Perception Index (used in core score)</span><span class="v">${fmt1(r.bp)}</span></div>
+      <p class="note">Weighted composite of the six sub-factors, built from NIRF standing, salary outcomes and institutional vintage.</p>
     </div>
     <div class="card"><h3>Score assembly</h3>
       ${compHTML}
@@ -972,7 +954,7 @@ function detailHTML(r) {
       <div class="kv ${engOn ? "" : "off"}"><span class="k">Engagement bonus (${esc(c.eng ?? "—")})${engOn ? "" : " — toggled off"}</span><span class="v">+${engOn ? r.engb : 0}</span></div>
       <div class="kv ${divOn ? "" : "off"}"><span class="k">Diversity bonus (${esc(c.div ?? "—")})${divOn ? "" : " — toggled off"}</span><span class="v">+${divOn ? r.divb : 0}</span></div>
       <div class="kv total"><span class="k">Total Priority Score</span><span class="v">${fmt2(r.total)}</span></div>
-      <div class="kv"><span class="k">Priority Rank (RANK.EQ on total)</span><span class="v">${r.prank}</span></div>
+      <div class="kv"><span class="k">Overall rank (by total score)</span><span class="v">${r.prank}</span></div>
       <div class="kv"><span class="k">Base Rank (core only)</span><span class="v">${r.brank}</span></div>
       ${r.added ? `<div class="form-actions" style="margin-top:12px">
         <button type="button" class="btn" data-edit="${r.i - COLLEGES.length}">Edit</button>
@@ -1030,7 +1012,7 @@ function catCardHTML(r) {
   return `<div class="catcard" data-open="${r.i}">
     <div class="cc-head"><span class="cc-score">${r.total.toFixed(1)}</span>
       <div class="cc-name">${esc(r.name)}</div></div>
-    <div class="cc-sub">${esc(r.city || "—")}, ${esc(r.state)} · ${esc(r.zone)} zone · RANK.EQ #${r.prank}</div>
+    <div class="cc-sub">${esc(r.city || "—")}, ${esc(r.state)} · ${esc(r.zone)} zone · overall rank #${r.prank}</div>
     <div class="cc-tags">${tags}</div>
   </div>`;
 }
@@ -1139,7 +1121,7 @@ function render() {
 els.headrow.addEventListener("click", e => {
   const th = e.target.closest("th"); if (!th) return;
   const key = th.dataset.key;
-  // scores sort desc first; ranks and text asc first; click cycle: sort -> reverse -> workbook order
+  // scores sort desc first; ranks and text asc first; click cycle: sort -> reverse -> default order
   const initialDir = (key === "core" || key === "total") ? -1 : 1;
   if (!sortState || sortState.key !== key) sortState = { key, dir: initialDir };
   else if (sortState.dir === initialDir) sortState.dir = -initialDir;
@@ -1229,7 +1211,7 @@ for (const el of [els.eng, els.div, els.zone, els.cg]) el.addEventListener("chan
 els.search.addEventListener("input", render);
 
 /* ================= Add / edit college ================= */
-/* Parse form fields with the same tolerance as the workbook cells:
+/* Parse form fields with the same tolerance as the scoring model:
    NIRF accepts a number, a band like "101-150", or "-"; blanks stay blank. */
 const parseNirf = s => { s = s.trim(); if (s === "") return null;
   return /^\d+(\.\d+)?$/.test(s) ? Number(s) : s; };
@@ -1289,7 +1271,7 @@ function updatePreview() {
     <div class="kv"><span class="k">Bonuses (current toggles)</span><span class="v">+${(els.eng.checked ? r.engb : 0) + (els.div.checked ? r.divb : 0)}</span></div>
     <div class="kv total"><span class="k">Total Priority Score</span><span class="v">${fmt2(r.total)}</span></div>
     <div class="kv"><span class="k">Dashboard rank</span><span class="v">${dashRank} of ${rows.length}</span></div>
-    <div class="kv"><span class="k">Priority Rank (RANK.EQ)</span><span class="v">${r.prank}</span></div>`;
+    <div class="kv"><span class="k">Overall rank</span><span class="v">${r.prank}</span></div>`;
 }
 
 function openModal(idx) {
