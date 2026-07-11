@@ -23,7 +23,9 @@ location resolution, ranking — follows the framework exactly.
   clicking it again clears.
 - **Toggles:** Engagement bonus (default on) and Diversity bonus (default off),
   matching the workbook's Dashboard-sheet toggles.
-- **Filters:** Zone, CG Priority, and free-text search.
+- **Filters:** multi-select Zone chips (pick any combination of zones), a
+  median-salary range in ₹ lakhs, CG Priority, and free-text search — all
+  applied across the dashboard and the catalogue.
 - **Table:** Dashboard-sheet ordering (CG priority group, then Total Priority
   Score), sortable columns, plus the workbook's pure RANK.EQ priority rank.
 - **Breakdown:** click any row for the full per-college computation
@@ -32,7 +34,8 @@ location resolution, ranking — follows the framework exactly.
   catalogue — priority tiers (defaults: Invest 70+, Engage 55–70, Selective
   40–55, Monitor <40, with the cutoffs editable live in the toolbar so the
   business can set them in the room; the matrices' high/low split follows the
-  Tier 2 cutoff) grouped by zone, an opportunity matrix (score × engagement), a
+  Tier 2 cutoff and the value matrix's "economical" median-salary threshold is
+  likewise editable) grouped by zone, an opportunity matrix (score × engagement), a
   value matrix (score × median salary), and tag-rich college cards. Follows
   the same slicers and bonus toggles, can hide test colleges, and has a
   Print / Save-PDF layout for handing to the business.
