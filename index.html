@@ -273,6 +273,9 @@
   .preview { border: 1px solid var(--border); border-radius: 8px; padding: 12px; align-self: start; }
   .preview h3 { margin: 0 0 8px; font-size: 12.5px; color: var(--text-secondary); }
   .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+  .how-body p { margin: 10px 0 0; font-size: 13px; }
+  .how-body .kv { margin-top: 12px; padding: 0; }
+  .how-body .note { margin: 2px 0 0; }
   .form-error { color: #b3261e; font-size: 12px; margin-right: auto; align-self: center; }
   @media (prefers-color-scheme: dark) { .form-error { color: #e66767; } }
 </style>
@@ -298,6 +301,7 @@
         <select id="cgSel"><option>All</option></select></span>
       <span class="control"><input type="search" id="search" placeholder="Search college / city / state…" aria-label="Search"></span>
       <button class="btn primary" id="addBtn" type="button">+ Add college</button>
+      <button class="clearlink" id="howBtn" type="button">How is this scored?</button>
       <button class="clearlink" id="clearBtn" type="button" hidden>Clear filters</button>
       <span class="count" id="count"></span>
       <button type="button" class="sync" id="syncState"></button>
@@ -402,12 +406,54 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="howOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="howTitle">
+    <h2 id="howTitle">How is a college's score put together?</h2>
+    <p class="hint">The plain-language version — the same numbers you see in any college's breakdown.</p>
+    <div class="how-body">
+      <p><b>Think of the score as a report card with six subjects.</b> Every college gets marks
+      out of 100 in each subject. The subjects aren't equally important, so each one contributes
+      a fixed slice of the final score. Add up the slices and you get the
+      <b>Core Score (0–100)</b>.</p>
+      <div class="kv"><span class="k">💰 Graduate salaries — <b>25% of the score</b></span></div>
+      <p class="note">How well this college's graduates are paid, compared to the best-paying college
+      in the list. The top college scores 100; a college paying half as much scores 50.</p>
+      <div class="kv"><span class="k">🏅 National ranking (NIRF) — <b>16.7%</b></span></div>
+      <p class="note">The college's position in the government's national ranking over the last three
+      years (this year counts most). A better rank means more marks; unranked colleges get very few.</p>
+      <div class="kv"><span class="k">📜 Quality grade (NAAC) — <b>16.7%</b></span></div>
+      <p class="note">The national quality-accreditation grade, converted to marks: A++ is 100,
+      A+ is 90, and so on down to 0 for no grade.</p>
+      <div class="kv"><span class="k">🎓 Programme accreditation (NBA) — <b>16.7%</b></span></div>
+      <p class="note">How much of the college's teaching is independently accredited, relative to the
+      best college in the list.</p>
+      <div class="kv"><span class="k">⭐ Brand perception — <b>12.5%</b></span></div>
+      <p class="note">A reputation estimate combining how much employers want its graduates, the
+      strength of its alumni network, placement outcomes, student quality and public visibility.</p>
+      <div class="kv"><span class="k">🎯 Our own priority tag (CG) — <b>12.5%</b></span></div>
+      <p class="note">The hiring team's own call: P1 (top priority) counts as 100 marks,
+      P2 as 50, no tag as 0.</p>
+      <p><b>Then two optional bonuses go on top</b> (the switches at the top of the page):</p>
+      <p class="note">🤝 <b>Engagement bonus</b> — colleges where we currently do <em>little</em>
+      engagement get the biggest boost (+10), because that's where extra effort pays off most.
+      Medium engagement gets +5, already-high engagement +2.<br>
+      🌈 <b>Diversity bonus</b> — +5 for campuses with a strong diversity profile.</p>
+      <p><b>Core Score + bonuses = Total Priority Score.</b> "Overall Rank" simply orders every
+      college by that total. The main list additionally keeps our P1 colleges first, then P2,
+      then the rest — so the business's priorities always lead the page.</p>
+      <div class="form-actions"><button type="button" class="btn primary" id="howClose">Got it</button></div>
+    </div>
+  </div>
+</div>
+
 <footer>
-  Weighted Core Score = Salary×0.25 + NIRF×0.1667 + NAAC×0.1667 + NBA×0.1667 + Brand&nbsp;Perception×0.125 + CG&nbsp;Priority×0.125
-  (weights from the agreed scoring framework, with YOE excluded and its weight redistributed).
-  Bonuses are added on top of the core score when toggled on. “Rank” is the list position
-  (CG&nbsp;priority group, then Total Priority Score); “Overall Rank” ranks every college by total score,
-  independent of the Zone/CG filters. Click any row's breakdown for the full computation.
+  Every college is marked out of 100 in six areas, and each area contributes a fixed slice of the
+  Core Score: graduate salaries 25%, national ranking 16.7%, quality grade 16.7%, programme
+  accreditation 16.7%, brand perception 12.5% and our own CG priority tag 12.5%. Optional bonus
+  points for engagement opportunity and diversity are added on top when toggled, giving the Total
+  Priority Score. “Rank” is the list position (P1 colleges first, then P2, then the rest, by total
+  score); “Overall Rank” orders every college purely by total score. Click any row for its full
+  breakdown, or “How is this scored?” above for the plain-language guide.
 </footer>
 
 <!-- MODEL_START -->
@@ -949,6 +995,8 @@ function detailHTML(r) {
       <p class="note">Weighted composite of the six sub-factors, built from NIRF standing, salary outcomes and institutional vintage.</p>
     </div>
     <div class="card"><h3>Score assembly</h3>
+      <p class="note" style="margin:0 0 8px">Marks out of 100 in six areas; each contributes its
+      fixed share of the core score, and bonus points go on top.</p>
       ${compHTML}
       <div class="kv total"><span class="k">Weighted Core Score</span><span class="v">${fmt2(r.core)}</span></div>
       <div class="kv ${engOn ? "" : "off"}"><span class="k">Engagement bonus (${esc(c.eng ?? "—")})${engOn ? "" : " — toggled off"}</span><span class="v">+${engOn ? r.engb : 0}</span></div>
@@ -1303,7 +1351,15 @@ function closeModal() { els.overlay.classList.remove("open"); editIndex = null; 
 document.getElementById("addBtn").addEventListener("click", () => openModal());
 document.getElementById("cancelBtn").addEventListener("click", closeModal);
 els.overlay.addEventListener("click", e => { if (e.target === els.overlay) closeModal(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && els.overlay.classList.contains("open")) closeModal(); });
+const howOverlay = document.getElementById("howOverlay");
+document.getElementById("howBtn").addEventListener("click", () => howOverlay.classList.add("open"));
+document.getElementById("howClose").addEventListener("click", () => howOverlay.classList.remove("open"));
+howOverlay.addEventListener("click", e => { if (e.target === howOverlay) howOverlay.classList.remove("open"); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (els.overlay.classList.contains("open")) closeModal();
+  howOverlay.classList.remove("open");
+});
 els.form.addEventListener("input", updatePreview);
 els.form.addEventListener("change", updatePreview);
 els.form.addEventListener("submit", async e => {
