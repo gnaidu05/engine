@@ -19,8 +19,10 @@ formula logic are embedded in the file; no backend or external calls.
 - **Breakdown:** click any row for the full per-college computation
   (salary/NIRF/NAAC/NBA indices, brand perception sub-scores, weights, bonuses).
 - **Catalogue view:** a second tab that turns the ranking into a business-ready
-  catalogue — priority tiers (Invest 70+, Engage 55–70, Selective 40–55,
-  Monitor <40) grouped by zone, an opportunity matrix (score × engagement), a
+  catalogue — priority tiers (defaults: Invest 70+, Engage 55–70, Selective
+  40–55, Monitor <40, with the cutoffs editable live in the toolbar so the
+  business can set them in the room; the matrices' high/low split follows the
+  Tier 2 cutoff) grouped by zone, an opportunity matrix (score × engagement), a
   value matrix (score × median salary), and tag-rich college cards. Follows
   the same slicers and bonus toggles, can hide test colleges, and has a
   Print / Save-PDF layout for handing to the business.

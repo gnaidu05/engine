@@ -187,6 +187,7 @@
   .vgroup { display: grid; gap: 14px; min-width: 0; }
   [hidden] { display: none !important; }
   /* ---- catalogue ---- */
+  .cutoffs input[type="number"] { width: 58px; padding: 4px 6px; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; font-size: 12.5px; }
   .tiersum { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
   .tiersum .kvalue { font-size: 26px; }
   .matrices { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
@@ -336,7 +337,13 @@
     <div class="visual cat-toolbar">
       <div class="slicers">
         <p class="vtitle" style="margin:0">College catalogue <span class="vhint">· priority tiers, then zone · follows the slicers and bonus toggles above</span></p>
-        <label class="control" style="margin-left:auto"><input type="checkbox" id="hideTest" checked> Hide test colleges</label>
+        <span class="control cutoffs" style="margin-left:auto" title="Tier boundaries on the Total Priority Score — adjust live with the business">
+          <label for="cut1">Tier cutoffs:&nbsp;&nbsp;1 ≥</label><input type="number" id="cut1" min="0" max="110" step="1">
+          <label for="cut2">2 ≥</label><input type="number" id="cut2" min="0" max="110" step="1">
+          <label for="cut3">3 ≥</label><input type="number" id="cut3" min="0" max="110" step="1">
+          <button class="clearlink" id="cutReset" type="button" hidden>Reset 70/55/40</button>
+        </span>
+        <label class="control"><input type="checkbox" id="hideTest" checked> Hide test colleges</label>
         <button class="btn" id="printBtn" type="button">Print / Save PDF</button>
       </div>
     </div>
@@ -976,12 +983,21 @@ function detailHTML(r) {
 }
 
 /* ================= catalogue view ================= */
-const TIERS = [
-  { name: "Tier 1 — Invest",    range: "score 70+",   desc: "Flagship campuses: full engagement calendar",  test: t => t >= 70 },
-  { name: "Tier 2 — Engage",    range: "score 55–70", desc: "Strong pipeline: targeted drives",             test: t => t >= 55 && t < 70 },
-  { name: "Tier 3 — Selective", range: "score 40–55", desc: "Specific roles and volumes only",              test: t => t >= 40 && t < 55 },
-  { name: "Tier 4 — Monitor",   range: "score <40",   desc: "Watch list: revisit next cycle",               test: t => t < 40 },
-];
+/* Tier cutoffs are the business's call — editable live in the toolbar. */
+const CUT_DEFAULTS = { c1: 70, c2: 55, c3: 40 };
+const CUT_KEY = "collegeDashboard.tierCutoffs.v1";
+let cutoffs = { ...CUT_DEFAULTS };
+try { cutoffs = { ...CUT_DEFAULTS, ...(JSON.parse(localStorage.getItem(CUT_KEY)) || {}) }; } catch (e) {}
+const saveCutoffs = () => { try { localStorage.setItem(CUT_KEY, JSON.stringify(cutoffs)); } catch (e) {} };
+
+function tiersFor({ c1, c2, c3 }) {
+  return [
+    { name: "Tier 1 — Invest",    range: `score ${c1}+`,        desc: "Flagship campuses: full engagement calendar", test: t => t >= c1 },
+    { name: "Tier 2 — Engage",    range: `score ${c2}–${c1}`,   desc: "Strong pipeline: targeted drives",            test: t => t >= c2 && t < c1 },
+    { name: "Tier 3 — Selective", range: `score ${c3}–${c2}`,   desc: "Specific roles and volumes only",             test: t => t >= c3 && t < c2 },
+    { name: "Tier 4 — Monitor",   range: `score <${c3}`,        desc: "Watch list: revisit next cycle",              test: t => t < c3 },
+  ];
+}
 const isTestCollege = n => /^test college/i.test(n.trim());
 const isEngaged = r => ["medium", "high"].includes(String(r.raw.eng || "").toLowerCase());
 const lakh = v => typeof v === "number" ? "₹" + (v / 100000).toFixed(1).replace(/\.0$/, "") + "L" : "—";
@@ -1020,30 +1036,34 @@ function catCardHTML(r) {
 }
 
 function renderCatalogue(viewRows) {
+  // reflect cutoff state into the toolbar controls
+  F("cut1").value = cutoffs.c1; F("cut2").value = cutoffs.c2; F("cut3").value = cutoffs.c3;
+  F("cutReset").hidden = cutoffs.c1 === CUT_DEFAULTS.c1 && cutoffs.c2 === CUT_DEFAULTS.c2 && cutoffs.c3 === CUT_DEFAULTS.c3;
   const hideTest = F("hideTest").checked;
   const rows = hideTest ? viewRows.filter(r => !isTestCollege(r.name)) : viewRows;
   const bonusState = `Engagement bonus ${els.eng.checked ? "on" : "off"} · Diversity bonus ${els.div.checked ? "on" : "off"}`;
   document.getElementById("printHead").innerHTML =
-    `<h1>College Priority Catalogue</h1>${rows.length} colleges · ${bonusState} · generated ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+    `<h1>College Priority Catalogue</h1>${rows.length} colleges · ${bonusState} · tier cutoffs ${cutoffs.c1}/${cutoffs.c2}/${cutoffs.c3} · generated ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
 
-  const tiers = TIERS.map(t => ({ ...t, rows: rows.filter(r => t.test(r.total)) }));
+  const tiers = tiersFor(cutoffs).map(t => ({ ...t, rows: rows.filter(r => t.test(r.total)) }));
   const summary = `<div class="tiersum">` + tiers.map(t => `
     <div class="visual kpi"><div class="klabel">${t.name}</div>
       <div class="kvalue">${t.rows.length}</div><div class="ksub">${t.range} · ${t.desc}</div></div>`).join("") + `</div>`;
 
-  // opportunity matrix: score vs engagement; value matrix: score vs median salary
-  const hi = rows.filter(r => r.total >= 55), lo = rows.filter(r => r.total < 55);
+  // matrices split on the Tier 2 lower bound: "high score" = Tier 1 + Tier 2
+  const hiCut = cutoffs.c2;
+  const hi = rows.filter(r => r.total >= hiCut), lo = rows.filter(r => r.total < hiCut);
   const byTotal = a => a.slice().sort((x, y) => y.total - x.total);
   const lowSal = r => typeof r.raw.med === "number" && r.raw.med <= 800000;
   const matrices = `<div class="matrices">
-    <div class="visual"><p class="vtitle">Opportunity matrix <span class="vhint">· score ≥55 = high · Medium/High status = engaged</span></p>
+    <div class="visual"><p class="vtitle">Opportunity matrix <span class="vhint">· score ≥${hiCut} = high (Tier 1–2) · Medium/High status = engaged</span></p>
       <div class="quadgrid">
         ${quadHTML("Opportunity", "high score · under-engaged — invest here", byTotal(hi.filter(r => !isEngaged(r))), true)}
         ${quadHTML("Defend", "high score · already engaged", byTotal(hi.filter(isEngaged)))}
         ${quadHTML("Maintain", "lower score · already engaged", byTotal(lo.filter(isEngaged)))}
         ${quadHTML("Deprioritize", "lower score · under-engaged", byTotal(lo.filter(r => !isEngaged(r))))}
       </div></div>
-    <div class="visual"><p class="vtitle">Value matrix <span class="vhint">· score ≥55 = high · median salary ≤₹8L = economical</span></p>
+    <div class="visual"><p class="vtitle">Value matrix <span class="vhint">· score ≥${hiCut} = high (Tier 1–2) · median salary ≤₹8L = economical</span></p>
       <div class="quadgrid">
         ${quadHTML("Hidden gems", "high score · economical talent", byTotal(hi.filter(lowSal)), true)}
         ${quadHTML("Premium picks", "high score · premium salary bands", byTotal(hi.filter(r => !lowSal(r))))}
@@ -1170,6 +1190,23 @@ document.addEventListener("click", e => {
 });
 document.getElementById("printBtn").addEventListener("click", () => window.print());
 document.getElementById("hideTest").addEventListener("change", render);
+
+/* tier cutoff controls: keep c1 >= c2 >= c3 by dragging the neighbours along */
+function applyCutoffs(changed) {
+  const clamp = v => Math.max(0, Math.min(110, v));
+  const read = id => { const n = Number(F(id).value); return Number.isFinite(n) ? clamp(n) : null; };
+  const v1 = read("cut1"), v2 = read("cut2"), v3 = read("cut3");
+  if (v1 !== null) cutoffs.c1 = v1;
+  if (v2 !== null) cutoffs.c2 = v2;
+  if (v3 !== null) cutoffs.c3 = v3;
+  if (changed === "cut1") { cutoffs.c2 = Math.min(cutoffs.c2, cutoffs.c1); cutoffs.c3 = Math.min(cutoffs.c3, cutoffs.c2); }
+  else if (changed === "cut2") { cutoffs.c1 = Math.max(cutoffs.c1, cutoffs.c2); cutoffs.c3 = Math.min(cutoffs.c3, cutoffs.c2); }
+  else { cutoffs.c2 = Math.max(cutoffs.c2, cutoffs.c3); cutoffs.c1 = Math.max(cutoffs.c1, cutoffs.c2); }
+  saveCutoffs();
+  render();
+}
+for (const id of ["cut1", "cut2", "cut3"]) F(id).addEventListener("change", () => applyCutoffs(id));
+F("cutReset").addEventListener("click", () => { cutoffs = { ...CUT_DEFAULTS }; saveCutoffs(); render(); });
 els.clearBtn.addEventListener("click", () => {
   els.zone.value = "All"; els.cg.value = "All"; els.search.value = ""; render();
 });
