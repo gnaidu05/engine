@@ -53,18 +53,18 @@ reflects everything chosen on the Dashboard tab).
   sheet (including the salary/NBA maxima rescaling). Added colleges can be
   edited or removed. By default they persist per-browser via localStorage;
   see below to share them across the whole team.
-- **Edit existing colleges:** every baseline college has an Edit button in its
-  breakdown (and appears in the Add College tab's list once touched). Edits
-  are stored as per-browser overrides keyed by the college name (the name
-  itself is locked — it is the identity); a "Reset to original" button undoes
-  the override. Edited colleges are badged and re-scored live, including the
-  salary/NBA maxima rescaling. Note: baseline edits stay in the browser even
-  when Supabase sharing is configured (only additions sync).
+- **Edit existing colleges:** the Add College tab carries a searchable
+  directory of every college — baseline and added — with View / Edit actions
+  (plus Remove for added and "Reset to original" for edited baseline
+  colleges). Baseline edits are overrides keyed by the college name (the
+  name itself is locked — it is the identity), badge the college as
+  "edited", and re-score it live including the salary/NBA maxima rescaling.
 
 ## Team-shared additions (Supabase)
 
-Out of the box, colleges added through the UI stay in each person's browser.
-To make additions shared and live for the whole team:
+Out of the box, all changes made through the UI (added colleges and edits to
+baseline colleges) stay in each person's browser. To make everything shared
+and live for the whole team:
 
 1. Create (or reuse) a [Supabase](https://supabase.com) project.
 2. In the project's SQL editor, run `supabase/shared_colleges.sql` from this
@@ -82,9 +82,10 @@ To make additions shared and live for the whole team:
 
 4. Commit and push to `main` — the site republishes automatically.
 
-With SHARED configured, the slicer bar shows "↻ shared with team" (click it to
-refresh), everyone sees the same added colleges, and edits/removals sync
-through the table. The anon key is public by design and safe to embed; access
+With SHARED configured, the Add College tab shows "↻ shared with team" (click
+it to refresh) and everything syncs through one table: added colleges are
+rows with kind='added', baseline-college edits are rows with kind='edited'
+(matched by name), and removals/resets delete the row. The anon key is public by design and safe to embed; access
 is governed by the RLS policies in the SQL file (anyone with the page URL can
 read/write — right for an internal tool; switch the policies to
 `authenticated` if you later add Supabase Auth). If the database is

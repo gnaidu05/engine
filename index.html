@@ -358,8 +358,10 @@
     </div>
     <div class="visual">
       <div class="slicers" style="margin-bottom:6px">
-        <p class="vtitle" style="margin:0">Added colleges</p>
-        <button type="button" class="sync" id="syncState" style="margin-left:auto"></button>
+        <p class="vtitle" style="margin:0">College directory <span class="vhint">· every college — edit any of them</span></p>
+        <span class="control" style="margin-left:auto">
+          <input type="search" id="dirSearch" placeholder="Find a college…" aria-label="Find a college"></span>
+        <button type="button" class="sync" id="syncState"></button>
       </div>
       <div id="addedList"></div>
     </div>
@@ -778,10 +780,11 @@ try { userColleges = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch 
 const saveUser = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(userColleges)); } catch (e) {} };
 
 /* ---- team-shared storage (Supabase) ----
-   Fill in url + anonKey to share added colleges across the whole team.
-   Leave both empty and additions stay in each browser's localStorage.
-   The table + row-level-security policies are created by
-   supabase/shared_colleges.sql in this repo. */
+   Fill in url + anonKey to share EVERYTHING the team changes — added
+   colleges and edits to the baseline colleges — through one table
+   (kind = 'added' | 'edited'). Leave both empty and all changes stay in
+   each browser's localStorage. The table + row-level-security policies
+   are created by supabase/shared_colleges.sql in this repo. */
 const SHARED = {
   url: "",       // e.g. "https://abcdefgh.supabase.co"
   anonKey: "",   // the project's public anon key (safe to embed; RLS applies)
@@ -815,16 +818,22 @@ const fromRow = row => ({ _id: row.id, name: row.name, loc: row.loc,
   avg: row.avg === null ? null : Number(row.avg),
   med: row.med === null ? null : Number(row.med),
   eng: row.eng ?? null, cg: row.cg ?? "NA" });
-function toRow(c) {
+function toRow(c, kind) {
   const t = v => v === null || v === undefined ? null : String(v);
-  return { name: c.name, loc: c.loc, type: c.type, year: c.year, div: c.div,
+  return { kind, name: c.name, loc: c.loc, type: c.type, year: c.year, div: c.div,
     nirf25: t(c.nirf25), nirf24: t(c.nirf24), nirf23: t(c.nirf23),
     naac: c.naac, nba: t(c.nba), avg: c.avg, med: c.med, eng: c.eng, cg: c.cg };
 }
 async function loadShared() {
   try {
     const rows = await sbFetch("?select=*&order=created_at.asc");
-    userColleges = rows.map(fromRow);
+    userColleges = [];
+    baseEdits = {};
+    for (const row of rows) {
+      const c = fromRow(row);
+      if (row.kind === "edited") baseEdits[c.name] = c;
+      else userColleges.push(c);
+    }
     sharedError = null;
   } catch (e) { sharedError = e.message; }
   render();
@@ -1192,15 +1201,20 @@ function renderCatalogue(viewRows) {
 /* ================= render ================= */
 let activeView = "dash";
 function renderAddList(allRows) {
-  const touched = allRows.filter(r => r.added || r.edited);
-  if (!touched.length) {
-    els.addedList.innerHTML = `<div class="empty">No colleges added or edited yet — use the form above, or hit Edit on any college in the Dashboard.</div>`;
+  const q = F("dirSearch").value.trim().toLowerCase();
+  // touched colleges first, then the rest, each group alphabetical
+  const list = allRows.slice().sort((a, b) =>
+    ((b.added || b.edited) - (a.added || a.edited)) || a.name.localeCompare(b.name));
+  const shown = q ? list.filter(r =>
+    r.name.toLowerCase().includes(q) || r.city.toLowerCase().includes(q) || r.state.toLowerCase().includes(q)) : list;
+  if (!shown.length) {
+    els.addedList.innerHTML = `<div class="empty">No colleges match "${esc(q)}"</div>`;
     return;
   }
-  els.addedList.innerHTML = touched.map(r => `
+  els.addedList.innerHTML = shown.map(r => `
     <div class="added-row">
       <div class="ar-main"><b>${esc(r.name)}</b>
-        <span class="chip added">${r.added ? "added" : "edited"}</span>
+        ${r.added ? '<span class="chip added">added</span>' : ""}${r.edited ? '<span class="chip added">edited</span>' : ""}
         <span class="ar-meta">${esc(r.city || "—")}, ${esc(r.state)} · ${esc(r.zone)} zone ·
           <span class="chip ${esc(r.cg)}">${esc(r.cg)}</span></span></div>
       <div class="ar-score">Total <b>${fmt2(r.total)}</b> · overall rank <b>#${r.prank}</b></div>
@@ -1210,7 +1224,7 @@ function renderAddList(allRows) {
           ? `<button type="button" class="btn" data-edit="${r.i - COLLEGES.length}">Edit</button>
              <button type="button" class="btn danger" data-remove="${r.i - COLLEGES.length}">Remove</button>`
           : `<button type="button" class="btn" data-editbase="${esc(r.name)}">Edit</button>
-             <button type="button" class="btn danger" data-resetbase="${esc(r.name)}">Reset to original</button>`}
+             ${r.edited ? `<button type="button" class="btn danger" data-resetbase="${esc(r.name)}">Reset to original</button>` : ""}`}
       </div>
     </div>`).join("");
 }
@@ -1225,10 +1239,10 @@ function render() {
   els.sync.className = "sync" + (sharedOn() ? (sharedError ? " on err" : " on") : "");
   els.sync.textContent = sharedOn()
     ? (sharedError ? "⚠ shared storage unreachable — click to retry" : "↻ shared with team")
-    : "additions stay in this browser";
+    : "changes stay in this browser";
   els.sync.title = sharedOn()
-    ? (sharedError ? sharedError : "Added colleges are stored in Supabase and visible to the whole team. Click to refresh.")
-    : "Configure SHARED in index.html (see supabase/shared_colleges.sql) to share additions across the team.";
+    ? (sharedError ? sharedError : "Added colleges and edits are stored in Supabase and visible to the whole team. Click to refresh.")
+    : "Configure SHARED in index.html (see supabase/shared_colleges.sql) to share additions and edits across the team.";
   const { lo: salLo, hi: salHi } = salaryBounds();
   els.clearBtn.hidden = zoneSet.size === 0 && els.cg.value === "All" && !els.search.value.trim()
     && salLo === null && salHi === null;
@@ -1300,7 +1314,17 @@ function handleEditRemoveClick(e) {
   const resetBtn = e.target.closest("[data-resetbase]");
   if (resetBtn) {
     const n = resetBtn.dataset.resetbase;
-    if (confirm(`Reset "${n}" to its original data?`)) { delete baseEdits[n]; saveBaseEdits(); render(); }
+    if (confirm(`Reset "${n}" to its original data?`)) {
+      (async () => {
+        if (sharedOn() && baseEdits[n] && baseEdits[n]._id) {
+          try { await sbFetch(`?id=eq.${baseEdits[n]._id}`, { method: "DELETE" }); }
+          catch (e2) { alert("Could not delete from shared storage (" + e2.message + ")"); return; }
+        }
+        delete baseEdits[n];
+        if (!sharedOn()) saveBaseEdits();
+        render();
+      })();
+    }
     return true;
   }
   return false;
@@ -1495,6 +1519,7 @@ document.getElementById("howClose").addEventListener("click", () => howOverlay.c
 howOverlay.addEventListener("click", e => { if (e.target === howOverlay) howOverlay.classList.remove("open"); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") howOverlay.classList.remove("open"); });
 els.form.addEventListener("input", () => { els.formError.classList.remove("ok"); els.formError.textContent = ""; updatePreview(); });
+F("dirSearch").addEventListener("input", render);
 els.form.addEventListener("change", updatePreview);
 els.form.addEventListener("submit", async e => {
   e.preventDefault();
@@ -1503,10 +1528,26 @@ els.form.addEventListener("submit", async e => {
   const err = validateForm(c);
   if (err) { els.formError.textContent = err; els.formError.classList.remove("ok"); return; }
   if (editBaseName !== null) {
-    // baseline-college edit: stored as a local override, not in shared storage
-    baseEdits[editBaseName] = c;
-    saveBaseEdits();
     const name = editBaseName;
+    if (sharedOn()) {
+      els.saveBtn.disabled = true;
+      try {
+        const existing = baseEdits[name] && baseEdits[name]._id;
+        const rows = existing
+          ? await sbFetch(`?id=eq.${existing}`, { method: "PATCH", body: JSON.stringify(toRow(c, "edited")) })
+          : await sbFetch("", { method: "POST", body: JSON.stringify(toRow(c, "edited")) });
+        baseEdits[name] = fromRow(rows[0]);
+      } catch (e2) {
+        els.formError.textContent = "Could not save to shared storage (" + e2.message + "). Try again.";
+        els.formError.classList.remove("ok");
+        els.saveBtn.disabled = false;
+        return;
+      }
+      els.saveBtn.disabled = false;
+    } else {
+      baseEdits[name] = c;
+      saveBaseEdits();
+    }
     editBaseName = null;
     openEditor(null);
     const r = computeCurrent(userColleges).find(x => x.name === name);
@@ -1519,10 +1560,10 @@ els.form.addEventListener("submit", async e => {
     try {
       if (editIndex !== null) {
         const rows = await sbFetch(`?id=eq.${userColleges[editIndex]._id}`,
-          { method: "PATCH", body: JSON.stringify(toRow(c)) });
+          { method: "PATCH", body: JSON.stringify(toRow(c, "added")) });
         userColleges[editIndex] = fromRow(rows[0]);
       } else {
-        const rows = await sbFetch("", { method: "POST", body: JSON.stringify(toRow(c)) });
+        const rows = await sbFetch("", { method: "POST", body: JSON.stringify(toRow(c, "added")) });
         userColleges.push(fromRow(rows[0]));
       }
     } catch (e2) {
@@ -1549,7 +1590,7 @@ els.form.addEventListener("submit", async e => {
 els.sync.addEventListener("click", () => { if (sharedOn()) loadShared(); });
 
 populateFilters();
-if (sharedOn()) { userColleges = []; loadShared(); }  // shared mode ignores localStorage
+if (sharedOn()) { userColleges = []; baseEdits = {}; loadShared(); }  // shared mode ignores localStorage
 render();
 </script>
 </body>
