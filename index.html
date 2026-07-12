@@ -299,6 +299,13 @@
   .how-body p { margin: 10px 0 0; font-size: 13px; }
   .how-body .kv { margin-top: 12px; padding: 0; }
   .how-body .note { margin: 2px 0 0; }
+  .nirf-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .nirf-chips .nlabel { font-size: 11.5px; color: var(--text-muted); }
+  .nirf-chip {
+    font-size: 11.5px; padding: 3px 9px; border-radius: 10px; cursor: pointer;
+    background: var(--accent-soft); border: 1px solid var(--accent); color: var(--text-primary);
+  }
+  .nirf-chip b { color: var(--accent); }
   .form-error { color: #b3261e; font-size: 12px; margin-right: auto; align-self: center; }
   .form-error.ok { color: #0b6b4a; }
   @media (prefers-color-scheme: dark) { .form-error.ok { color: #7fd9b4; } }
@@ -346,6 +353,7 @@
           <input id="f_med" type="number" min="0" step="1000" placeholder="e.g. 800000"></div>
         <div class="field"><label for="f_avg">Average salary (₹)</label>
           <input id="f_avg" type="number" min="0" step="1000" placeholder="e.g. 950000"></div>
+        <div class="field wide" id="nirfSuggest" hidden></div>
         <div class="field"><label for="f_n25">NIRF rank 2025</label>
           <input id="f_n25" placeholder='number, band ("101-150") or "-"'></div>
         <div class="field"><label for="f_n24">NIRF rank 2024</label>
@@ -760,6 +768,36 @@ if (typeof module !== "undefined") module.exports = { COLLEGES, computeAll, dash
 <script>
 "use strict";
 const fmt2 = v => v === null || v === "" ? "—" : (Math.round(v*100)/100).toFixed(2);
+
+/* ---- official NIRF engineering rankings directory ----
+   Used to auto-fill the three NIRF rank fields when a college name is typed.
+   Regenerate from nirfindia.org with scripts/build_nirf_directory.py, or run
+   the "Update NIRF directory" workflow in this repo (Actions tab). */
+/* NIRF_DIRECTORY_META_START */
+const NIRF_META = "seeded from the team's data — run the Update NIRF directory workflow to refresh from nirfindia.org";
+/* NIRF_DIRECTORY_META_END */
+/* NIRF_DIRECTORY_START */
+const NIRF_DIRECTORY = [{"n":"Amrita School of Engineering, Coimbatore","c":"Coimbatore","s":"Tamil Nadu","r25":23,"r24":23,"r23":19},{"n":"College of Engineering, Guindy","c":"Chennai","s":"Tamil Nadu","r25":20,"r24":14,"r23":13},{"n":"Banasthali Vidyapith, Banasthali","c":"Banasthali","s":"Rajasthan","r25":71,"r24":78,"r23":68},{"n":"Chitkara University, Rajpura-Patiala, Punjab","c":"Rajpura","s":"Punjab","r25":89,"r24":94,"r23":92},{"n":"Manipal Institute of Technology, Manipal","c":"Manipal","s":"Karnataka","r25":59,"r24":56,"r23":61},{"n":"PSG College of Technology, Coimbatore","c":"Coimbatore","s":"Tamil Nadu","r25":67,"r24":67,"r23":63},{"n":"SASTRA Deemed University, Thanjavur","c":"Thanjavur","s":"Tamil Nadu","r25":40,"r24":38,"r23":34},{"n":"SRM Institute of Science and Technology, Kattankulathur Campus","c":"Kattankulathur","s":"Tamil Nadu","r25":14,"r24":13,"r23":28},{"n":"Vellore Institute of Technology, Vellore","c":"Vellore","s":"Tamil Nadu","r25":16,"r24":11,"r23":11},{"n":"Sri Sivasubramaniya Nadar College of Engineering, Chennai","c":"Chennai","s":"Tamil Nadu","r25":47,"r24":46,"r23":45},{"n":"M. S. Ramaiah Institute of Technology, Bengaluru","c":"Bengaluru","s":"Karnataka","r25":75,"r24":75,"r23":78},{"n":"RV College of Engineering, Bengaluru (RVCE)","c":"Bengaluru","s":"Karnataka","r25":"101-150","r24":99,"r23":96},{"n":"PES University, Bengaluru","c":"Bengaluru","s":"Karnataka","r25":"101-150","r24":"101-150","r23":"101-150"},{"n":"Dayananda Sagar College of Engineering, Bengaluru","c":"Bengaluru","s":"Karnataka","r25":"201-300","r24":"201-300","r23":null},{"n":"BMS College of Engineering, Bengaluru","c":"Bengaluru","s":"Karnataka","r25":"151-200","r24":"151-200","r23":"101-150"},{"n":"Sardar Patel Institute of Technology, Mumbai","c":"Mumbai","s":"Maharashtra","r25":null,"r24":"201-300","r23":null},{"n":"Sardar Patel College of Engineering, Mumbai","c":"Mumbai","s":"Maharashtra","r25":"101-150","r24":"201-300","r23":"201-300"},{"n":"Veermata Jijabai Technological Institute, Mumbai","c":"Mumbai","s":"Maharashtra","r25":"101-150","r24":"101-150","r23":"101-150"},{"n":"K.J. Somaiya School of Engineering, Mumbai","c":"Mumbai","s":"Maharashtra","r25":"201-300","r24":"201-300","r23":"201-300"},{"n":"Mukesh Patel School of Technology Management and Engineering, Mumbai","c":"Mumbai","s":"Maharashtra","r25":"101-150","r24":"101-150","r23":"101-150"},{"n":"College of Engineering Pune (COEP Technological University)","c":"Pune","s":"Maharashtra","r25":90,"r24":77,"r23":73},{"n":"Thapar Institute of Engineering and Technology, Patiala","c":"Patiala","s":"Punjab","r25":29,"r24":29,"r23":20},{"n":"Cummins College of Engineering for Women, Pune","c":"Pune","s":"Maharashtra","r25":"201-300","r24":"201-300","r23":null},{"n":"Vishwakarma Institute of Technology, Pune","c":"Pune","s":"Maharashtra","r25":"101-150","r24":"151-200","r23":"151-200"},{"n":"Nirma University, Ahmedabad","c":"Ahmedabad","s":"Gujarat","r25":"101-150","r24":"101-150","r23":"101-150"},{"n":"Dhirubhai Ambani University (DAIICT), Gandhinagar","c":"Gandhinagar","s":"Gujarat","r25":"201-300","r24":null,"r23":null},{"n":"College of Engineering Trivandrum, Thiruvananthapuram","c":"Trivendram","s":"Kerala","r25":"101-150","r24":"101-150","r23":"151-200"},{"n":"Jamia Millia Islamia, New Delhi","c":"New Delhi","s":"Delhi","r25":24,"r24":24,"r23":26},{"n":"Indira Gandhi Delhi Technical University for Women (IGDTUW), New Delhi","c":"New Delhi","s":"Delhi","r25":"201-300","r24":"151-200","r23":"151-200"},{"n":"Mahindra University, Hyderabad","c":"Hyderabad","s":"Telangana","r25":"101-150","r24":"101-150","r23":"151-200"},{"n":"Jaypee Institute of Information Technology, Noida","c":"Noida","s":"Uttar Pradesh","r25":"101-150","r24":"101-150","r23":"101-150"},{"n":"Punjab Engineering College (Deemed to be University), Chandigarh","c":"Chandigarh","s":"Chandigarh","r25":"101-150","r24":"101-150","r23":"101-150"},{"n":"J. C. Bose University of Science and Technology, YMCA, Faridabad","c":"Faridabad","s":"Haryana","r25":"151-200","r24":"151-200","r23":"101-150"},{"n":"Birsa Institute of Technology, Sindri","c":"Dhanbad","s":"Jharkhand","r25":"201-300","r24":"201-300","r23":"201-250"},{"n":"JSS Science and Technology University, Mysuru","c":"Mysuru","s":"Karnataka","r25":"201-300","r24":"201-300","r23":"151-200"},{"n":"Shri Mata Vaishno Devi University, Katra","c":"Katra","s":"Jammu & Kashmir","r25":"151-200","r24":"151-200","r23":"101-150"},{"n":"Harcourt Butler Technical University, Kanpur","c":"Kanpur","s":"Uttar Pradesh","r25":"201-300","r24":null,"r23":null},{"n":"JSS Academy of Technical Education, Noida","c":"Noida","s":"Uttar Pradesh","r25":"201-300","r24":"201-300","r23":null},{"n":"University Institute of Engineering and Technology, Panjab University, Chandigarh","c":"Chandigarh","s":"Chandigarh","r25":93,"r24":"101-150","r23":"101-150"},{"n":"Faculty of Technology and Engineering, The Maharaja Sayajirao University of Baroda","c":"Baroda","s":"Gujarat","r25":"201-300","r24":"201-300","r23":"151-200"},{"n":"Pandit Deendayal Energy University, Gandhinagar","c":"Gandhinagar","s":"Gujarat","r25":98,"r24":"101-150","r23":"101-150"},{"n":"Kumaraguru College of Technology, Coimbatore","c":"Coimbatore","s":"Tamil Nadu","r25":"151-200","r24":"151-200","r23":"101-150"},{"n":"Coimbatore Institute of Technology, Coimbatore","c":"Coimbatore","s":"Tamil Nadu","r25":"101-150","r24":"101-150","r23":"101-150"},{"n":"Thiagarajar College of Engineering, Madurai","c":"Madurai","s":"Tamil Nadu","r25":"101-150","r24":"101-150","r23":"101-150"},{"n":"Vasavi College of Engineering, Hyderabad","c":"Hyderabad","s":"Telangana","r25":null,"r24":"201-300","r23":null},{"n":"Gokaraju Rangaraju Institute of Engineering and Technology, Hyderabad","c":"Hyderabad","s":"Telangana","r25":"151-200","r24":"101-150","r23":"101-150"},{"n":"Andhra University College of Engineering, Visakhapatnam","c":"Visakhapatnam","s":"Andhra Pradesh","r25":88,"r24":90,"r23":94},{"n":"Sri Venkateswara University College of Engineering, Tirupati","c":"Tirupati","s":"Andhra Pradesh","r25":"201-300","r24":"201-300","r23":null},{"n":"The LNM Institute of Information Technology, Jaipur (LNMIIT)","c":"Jaipur","s":"Rajasthan","r25":"201-300","r24":"201-300","r23":null}];
+/* NIRF_DIRECTORY_END */
+
+const nirfNorm = s => String(s).toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+function nirfMatches(query, limit = 3) {
+  const q = nirfNorm(query);
+  if (q.length < 4) return [];
+  const qTokens = q.split(" ").filter(t => t.length > 1);
+  if (!qTokens.length) return [];
+  const scored = [];
+  for (const e of NIRF_DIRECTORY) {
+    const hay = nirfNorm(e.n + " " + (e.c || ""));
+    let hit = 0;
+    for (const t of qTokens) if (hay.includes(t)) hit++;
+    const frac = hit / qTokens.length;
+    if (frac < 0.6) continue;
+    scored.push({ e, score: frac + (hay.startsWith(qTokens[0]) ? 0.1 : 0) + Math.min(hit, 6) * 0.01 });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit).map(x => x.e);
+}
 const fmt1 = v => v === null || v === "" ? "—" : v.toFixed(1);
 const esc = s => String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const inr = v => "₹" + Number(v).toLocaleString("en-IN");
@@ -1555,6 +1593,7 @@ function fillForm(c, lockName) {
   F("f_div").value = c && c.div !== null ? c.div : "";
   F("f_cg").value = c ? c.cg : "NA";
   updatePreview();
+  renderNirfSuggestions();
   activeView = "add";
   render();
   F("f_name").focus();
@@ -1566,7 +1605,34 @@ document.getElementById("howBtn").addEventListener("click", () => howOverlay.cla
 document.getElementById("howClose").addEventListener("click", () => howOverlay.classList.remove("open"));
 howOverlay.addEventListener("click", e => { if (e.target === howOverlay) howOverlay.classList.remove("open"); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") howOverlay.classList.remove("open"); });
-els.form.addEventListener("input", () => { els.formError.classList.remove("ok"); els.formError.textContent = ""; updatePreview(); });
+function renderNirfSuggestions() {
+  const box = F("nirfSuggest");
+  const name = editBaseName ?? F("f_name").value;
+  const matches = nirfMatches(name);
+  if (!matches.length) { box.hidden = true; box.innerHTML = ""; return; }
+  const fmtR = v => v === null || v === undefined ? "—" : v;
+  box.hidden = false;
+  box.innerHTML = `<div class="nirf-chips"><span class="nlabel">NIRF engineering rankings — click to fill:</span>` +
+    matches.map((e, i) => `<button type="button" class="nirf-chip" data-nirf="${i}"
+      title="${esc(e.n)} (${esc(e.c || "")}) — fills 2025/2024/2023">
+      ${esc(e.n.length > 44 ? e.n.slice(0, 43) + "…" : e.n)} <b>'25: ${fmtR(e.r25)} · '24: ${fmtR(e.r24)} · '23: ${fmtR(e.r23)}</b></button>`).join("") +
+    `</div>`;
+  box._matches = matches;
+}
+F("nirfSuggest").addEventListener("click", e => {
+  const chip = e.target.closest("[data-nirf]");
+  if (!chip) return;
+  const m = F("nirfSuggest")._matches[Number(chip.dataset.nirf)];
+  F("f_n25").value = m.r25 ?? "-";
+  F("f_n24").value = m.r24 ?? "-";
+  F("f_n23").value = m.r23 ?? "-";
+  updatePreview();
+});
+els.form.addEventListener("input", e => {
+  els.formError.classList.remove("ok"); els.formError.textContent = "";
+  if (e.target && e.target.id === "f_name") renderNirfSuggestions();
+  updatePreview();
+});
 F("dirSearch").addEventListener("input", render);
 els.form.addEventListener("change", updatePreview);
 els.form.addEventListener("submit", async e => {
