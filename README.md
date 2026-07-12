@@ -53,6 +53,14 @@ reflects everything chosen on the Dashboard tab).
   sheet (including the salary/NBA maxima rescaling). Added colleges can be
   edited or removed. By default they persist per-browser via localStorage;
   see below to share them across the whole team.
+- **NIRF auto-fill:** typing a college name in the form surfaces matching
+  institutes from an embedded directory of the official nirfindia.org
+  engineering rankings (ranks 1-100 plus the 101-150/151-200/201-300 bands,
+  for 2023-2025) as clickable chips; picking one fills the three NIRF rank
+  fields. The directory is bundled into the page (no runtime external calls)
+  and is refreshed from the official site by the "Update NIRF directory"
+  workflow (Actions tab), which runs scripts/build_nirf_directory.py and
+  commits the result — run it whenever NIRF publishes a new year.
 - **Edit existing colleges:** the Add College tab carries a searchable
   directory of every college — baseline and added — with View / Edit actions
   (plus Remove for added and "Reset to original" for edited baseline
