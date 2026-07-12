@@ -284,6 +284,16 @@
   .how-body .kv { margin-top: 12px; padding: 0; }
   .how-body .note { margin: 2px 0 0; }
   .form-error { color: #b3261e; font-size: 12px; margin-right: auto; align-self: center; }
+  .form-error.ok { color: #0b6b4a; }
+  @media (prefers-color-scheme: dark) { .form-error.ok { color: #7fd9b4; } }
+  .added-row {
+    display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+    padding: 9px 2px; border-top: 1px solid var(--border);
+  }
+  .added-row .ar-main { flex: 1 1 320px; min-width: 0; font-size: 13px; }
+  .added-row .ar-meta { color: var(--text-muted); font-size: 12px; margin-left: 6px; }
+  .added-row .ar-score { font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .added-row .ar-actions { display: flex; gap: 6px; }
   @media (prefers-color-scheme: dark) { .form-error { color: #e66767; } }
 </style>
 </head>
@@ -292,92 +302,20 @@
   <h1>College Priority Rankings</h1>
   <span class="sub">Early-careers hiring · campus priority scoring · click a chart to cross-filter</span>
   <nav class="tabs">
-    <button type="button" class="tab active" data-view="dash">Dashboard</button>
-    <button type="button" class="tab" data-view="cat">Catalogue</button>
+    <button type="button" class="tab" data-view="add">1 · Add College</button>
+    <button type="button" class="tab active" data-view="dash">2 · Dashboard</button>
+    <button type="button" class="tab" data-view="cat">3 · Catalogue</button>
   </nav>
 </div>
 
 <div class="canvas">
-  <div class="visual slicerbar">
-    <div class="slicers">
-      <label class="switch control"><input type="checkbox" id="engToggle" checked><span class="track"><span class="knob"></span></span><span>Engagement bonus</span></label>
-      <label class="switch control"><input type="checkbox" id="divToggle"><span class="track"><span class="knob"></span></span><span>Diversity bonus</span></label>
-      <span class="control"><label id="zoneLabel">Zone</label>
-        <span class="chipgroup" id="zoneChips" role="group" aria-labelledby="zoneLabel"></span></span>
-      <span class="control" title="Filter by median salary (₹ lakhs); leave blank for no limit">
-        <label for="salMin">Median&nbsp;salary&nbsp;₹L</label>
-        <input type="number" id="salMin" class="salbox" min="0" step="0.5" placeholder="min">
-        <span>–</span>
-        <input type="number" id="salMax" class="salbox" min="0" step="0.5" placeholder="max"></span>
-      <span class="control"><label for="cgSel">CG&nbsp;Priority</label>
-        <select id="cgSel"><option>All</option></select></span>
-      <span class="control"><input type="search" id="search" placeholder="Search college / city / state…" aria-label="Search"></span>
-      <button class="btn primary" id="addBtn" type="button">+ Add college</button>
-      <button class="clearlink" id="howBtn" type="button">How is this scored?</button>
-      <button class="clearlink" id="clearBtn" type="button" hidden>Clear filters</button>
-      <span class="count" id="count"></span>
-      <button type="button" class="sync" id="syncState"></button>
-    </div>
-  </div>
-
-  <div id="dashView" class="vgroup">
-  <div class="kpis" id="kpis"></div>
-
-  <div class="charts">
-    <div class="visual chartbox">
-      <p class="vtitle">Avg Total Priority Score by Zone <span class="vhint">· click to filter</span></p>
-      <div id="zoneChart"></div>
-    </div>
-    <div class="visual chartbox">
-      <p class="vtitle">Colleges by CG Priority <span class="vhint">· click to filter</span></p>
-      <div id="cgChart"></div>
-    </div>
-    <div class="visual chartbox">
-      <p class="vtitle">Top 10 by Total Priority Score</p>
-      <div id="topChart"></div>
-    </div>
-  </div>
-
-  <div class="visual">
-    <p class="vtitle">Priority rankings <span class="vhint">· CG priority group, then total score · click a row for the full breakdown</span></p>
-    <div class="tablewrap">
-      <table id="tbl">
-        <thead><tr id="headrow"></tr></thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-  </div>
-  </div><!-- /dashView -->
-
-  <div id="catView" class="vgroup" hidden>
-    <div class="visual cat-toolbar">
-      <div class="slicers">
-        <p class="vtitle" style="margin:0">College catalogue <span class="vhint">· priority tiers, then zone · follows the slicers and bonus toggles above</span></p>
-        <span class="control cutoffs" style="margin-left:auto" title="Tier boundaries on the Total Priority Score — adjust live with the business">
-          <label for="cut1">Tier cutoffs:&nbsp;&nbsp;1 ≥</label><input type="number" id="cut1" min="0" max="110" step="1">
-          <label for="cut2">2 ≥</label><input type="number" id="cut2" min="0" max="110" step="1">
-          <label for="cut3">3 ≥</label><input type="number" id="cut3" min="0" max="110" step="1">
-          <button class="clearlink" id="cutReset" type="button" hidden>Reset 70/55/40</button>
-        </span>
-        <span class="control" title="Median salary at or below this counts as economical in the value matrix">
-          <label for="econCut">Economical ≤ ₹</label><input type="number" id="econCut" class="salbox" min="0" step="0.5"><span>L</span></span>
-        <label class="control"><input type="checkbox" id="hideTest" checked> Hide test colleges</label>
-        <button class="btn" id="printBtn" type="button">Print / Save PDF</button>
-      </div>
-    </div>
-    <div class="printhead" id="printHead"></div>
-    <div id="catBody" class="vgroup"></div>
-  </div>
-</div>
-
-<div id="tooltip" role="tooltip"></div>
-
-<div class="modal-overlay" id="overlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <h2 id="modalTitle">Add college</h2>
-    <p class="hint">Enter the raw data for the college.
-      Everything else — city, state, zone, every index, brand perception, scores and ranks — is computed automatically.</p>
-    <form id="addForm" class="formgrid" novalidate>
+  <div id="addView" class="vgroup" hidden>
+    <div class="visual">
+      <p class="vtitle" id="formTitle">Add a college</p>
+      <p class="hint">Enter the raw data for the college.
+        Everything else — city, state, zone, every index, brand perception, scores and ranks — is computed automatically.
+        Saved colleges appear in the Dashboard and Catalogue tabs immediately.</p>
+      <form id="addForm" class="formgrid" novalidate>
       <div class="fields">
         <div class="field wide"><label for="f_name">College name *</label>
           <input id="f_name" required placeholder="e.g. National Institute of Engineering, Mysuru"></div>
@@ -413,12 +351,94 @@
       <div class="preview" id="preview" aria-live="polite"></div>
       <div class="form-actions" style="grid-column:1/-1">
         <span class="form-error" id="formError"></span>
-        <button type="button" class="btn" id="cancelBtn">Cancel</button>
+        <button type="button" class="btn" id="cancelBtn">Clear form</button>
         <button type="submit" class="btn primary" id="saveBtn">Add college</button>
       </div>
     </form>
+    </div>
+    <div class="visual">
+      <div class="slicers" style="margin-bottom:6px">
+        <p class="vtitle" style="margin:0">Added colleges</p>
+        <button type="button" class="sync" id="syncState" style="margin-left:auto"></button>
+      </div>
+      <div id="addedList"></div>
+    </div>
+  </div>
+
+  <div id="dashView" class="vgroup">
+  <div class="visual slicerbar">
+    <div class="slicers">
+      <label class="switch control"><input type="checkbox" id="engToggle" checked><span class="track"><span class="knob"></span></span><span>Engagement bonus</span></label>
+      <label class="switch control"><input type="checkbox" id="divToggle"><span class="track"><span class="knob"></span></span><span>Diversity bonus</span></label>
+      <span class="control"><label id="zoneLabel">Zone</label>
+        <span class="chipgroup" id="zoneChips" role="group" aria-labelledby="zoneLabel"></span></span>
+      <span class="control" title="Filter by median salary (₹ lakhs); leave blank for no limit">
+        <label for="salMin">Median&nbsp;salary&nbsp;₹L</label>
+        <input type="number" id="salMin" class="salbox" min="0" step="0.5" placeholder="min">
+        <span>–</span>
+        <input type="number" id="salMax" class="salbox" min="0" step="0.5" placeholder="max"></span>
+      <span class="control"><label for="cgSel">CG&nbsp;Priority</label>
+        <select id="cgSel"><option>All</option></select></span>
+      <span class="control"><input type="search" id="search" placeholder="Search college / city / state…" aria-label="Search"></span>
+      <button class="clearlink" id="howBtn" type="button">How is this scored?</button>
+      <button class="clearlink" id="clearBtn" type="button" hidden>Clear filters</button>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="slicers" style="border-top:1px solid var(--border); margin-top:10px; padding-top:10px">
+      <span class="control cutoffs" title="Tier boundaries on the Total Priority Score — used by the Catalogue tab">
+        <label for="cut1">Catalogue tier cutoffs:&nbsp;&nbsp;Tier 1 ≥</label><input type="number" id="cut1" min="0" max="110" step="1">
+        <label for="cut2">Tier 2 ≥</label><input type="number" id="cut2" min="0" max="110" step="1">
+        <label for="cut3">Tier 3 ≥</label><input type="number" id="cut3" min="0" max="110" step="1">
+        <button class="clearlink" id="cutReset" type="button" hidden>Reset 70/55/40</button>
+      </span>
+      <span class="control" title="Median salary at or below this counts as economical in the Catalogue's value matrix">
+        <label for="econCut">Economical ≤ ₹</label><input type="number" id="econCut" class="salbox" min="0" step="0.5"><span>L</span></span>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="charts">
+    <div class="visual chartbox">
+      <p class="vtitle">Avg Total Priority Score by Zone <span class="vhint">· click to filter</span></p>
+      <div id="zoneChart"></div>
+    </div>
+    <div class="visual chartbox">
+      <p class="vtitle">Colleges by CG Priority <span class="vhint">· click to filter</span></p>
+      <div id="cgChart"></div>
+    </div>
+    <div class="visual chartbox">
+      <p class="vtitle">Top 10 by Total Priority Score</p>
+      <div id="topChart"></div>
+    </div>
+  </div>
+
+  <div class="visual">
+    <p class="vtitle">Priority rankings <span class="vhint">· CG priority group, then total score · click a row for the full breakdown</span></p>
+    <div class="tablewrap">
+      <table id="tbl">
+        <thead><tr id="headrow"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  </div><!-- /dashView -->
+
+  <div id="catView" class="vgroup" hidden>
+    <div class="visual cat-toolbar">
+      <div class="slicers">
+        <p class="vtitle" style="margin:0">College catalogue <span class="vhint">· priority tiers, then zone · filters, bonus toggles and cutoffs are chosen on the Dashboard tab</span></p>
+        <label class="control" style="margin-left:auto"><input type="checkbox" id="hideTest" checked> Hide test colleges</label>
+        <button class="btn" id="printBtn" type="button">Print / Save PDF</button>
+      </div>
+    </div>
+    <div class="printhead" id="printHead"></div>
+    <div id="catBody" class="vgroup"></div>
   </div>
 </div>
+
+<div id="tooltip" role="tooltip"></div>
+
 
 <div class="modal-overlay" id="howOverlay">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="howTitle">
@@ -803,10 +823,10 @@ const els = {
   salMin: document.getElementById("salMin"), salMax: document.getElementById("salMax"),
   search: document.getElementById("search"), count: document.getElementById("count"),
   tbody: document.getElementById("tbody"), headrow: document.getElementById("headrow"),
-  sync: document.getElementById("syncState"),
-  overlay: document.getElementById("overlay"), form: document.getElementById("addForm"),
+  sync: document.getElementById("syncState"), addedList: document.getElementById("addedList"),
+  form: document.getElementById("addForm"),
   preview: document.getElementById("preview"), locPreview: document.getElementById("locPreview"),
-  formError: document.getElementById("formError"), modalTitle: document.getElementById("modalTitle"),
+  formError: document.getElementById("formError"), formTitle: document.getElementById("formTitle"),
   saveBtn: document.getElementById("saveBtn"), kpis: document.getElementById("kpis"),
   zoneChart: document.getElementById("zoneChart"), cgChart: document.getElementById("cgChart"),
   topChart: document.getElementById("topChart"), tooltip: document.getElementById("tooltip"),
@@ -1098,10 +1118,6 @@ function catCardHTML(r) {
 }
 
 function renderCatalogue(viewRows) {
-  // reflect cutoff state into the toolbar controls
-  F("cut1").value = cutoffs.c1; F("cut2").value = cutoffs.c2; F("cut3").value = cutoffs.c3;
-  F("econCut").value = econCut;
-  F("cutReset").hidden = cutoffs.c1 === CUT_DEFAULTS.c1 && cutoffs.c2 === CUT_DEFAULTS.c2 && cutoffs.c3 === CUT_DEFAULTS.c3;
   const hideTest = F("hideTest").checked;
   const rows = hideTest ? viewRows.filter(r => !isTestCollege(r.name)) : viewRows;
   const bonusState = `Engagement bonus ${els.eng.checked ? "on" : "off"} · Diversity bonus ${els.div.checked ? "on" : "off"}`;
@@ -1158,8 +1174,31 @@ function renderCatalogue(viewRows) {
 
 /* ================= render ================= */
 let activeView = "dash";
+function renderAddList(allRows) {
+  const added = allRows.filter(r => r.added);
+  if (!added.length) {
+    els.addedList.innerHTML = `<div class="empty">No colleges added yet — use the form above.</div>`;
+    return;
+  }
+  els.addedList.innerHTML = added.map(r => `
+    <div class="added-row">
+      <div class="ar-main"><b>${esc(r.name)}</b>
+        <span class="ar-meta">${esc(r.city || "—")}, ${esc(r.state)} · ${esc(r.zone)} zone ·
+          <span class="chip ${esc(r.cg)}">${esc(r.cg)}</span></span></div>
+      <div class="ar-score">Total <b>${fmt2(r.total)}</b> · overall rank <b>#${r.prank}</b></div>
+      <div class="ar-actions">
+        <button type="button" class="btn" data-open="${r.i}">View in dashboard</button>
+        <button type="button" class="btn" data-edit="${r.i - COLLEGES.length}">Edit</button>
+        <button type="button" class="btn danger" data-remove="${r.i - COLLEGES.length}">Remove</button>
+      </div>
+    </div>`).join("");
+}
+
 function render() {
   buildHead();
+  F("cut1").value = cutoffs.c1; F("cut2").value = cutoffs.c2; F("cut3").value = cutoffs.c3;
+  F("econCut").value = econCut;
+  F("cutReset").hidden = cutoffs.c1 === CUT_DEFAULTS.c1 && cutoffs.c2 === CUT_DEFAULTS.c2 && cutoffs.c3 === CUT_DEFAULTS.c3;
   const { view, forZoneChart, forCgChart } = viewSets();
   els.count.textContent = `${view.length} of ${COLLEGES.length + userColleges.length} colleges`;
   els.sync.className = "sync" + (sharedOn() ? (sharedError ? " on err" : " on") : "");
@@ -1176,9 +1215,11 @@ function render() {
     b.classList.toggle("on", zoneSet.has(b.dataset.zone));
     b.setAttribute("aria-pressed", zoneSet.has(b.dataset.zone));
   }
+  document.getElementById("addView").hidden = activeView !== "add";
   document.getElementById("dashView").hidden = activeView !== "dash";
   document.getElementById("catView").hidden = activeView !== "cat";
   for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t.dataset.view === activeView);
+  if (activeView === "add") { renderAddList(dashSort(computeAll(els.eng.checked, els.div.checked, userColleges))); return; }
   if (activeView === "cat") { renderCatalogue(view); return; }
   els.kpis.innerHTML = kpiHTML(view);
   els.zoneChart.innerHTML = zoneChartHTML(forZoneChart);
@@ -1216,25 +1257,28 @@ els.headrow.addEventListener("click", e => {
   render();
 });
 
-els.tbody.addEventListener("click", e => {
-  const editBtn = e.target.closest("[data-edit]");
-  if (editBtn) { openModal(Number(editBtn.dataset.edit)); return; }
-  const removeBtn = e.target.closest("[data-remove]");
-  if (removeBtn) {
-    const idx = Number(removeBtn.dataset.remove);
-    if (confirm(`Remove "${userColleges[idx].name}" from the rankings?`)) {
-      (async () => {
-        if (sharedOn()) {
-          try { await sbFetch(`?id=eq.${userColleges[idx]._id}`, { method: "DELETE" }); }
-          catch (e2) { alert("Could not delete from shared storage (" + e2.message + ")"); return; }
-        }
-        userColleges.splice(idx, 1);
-        if (!sharedOn()) saveUser();
-        openRow = null; render();
-      })();
+function handleRemove(idx) {
+  if (!confirm(`Remove "${userColleges[idx].name}" from the rankings?`)) return;
+  (async () => {
+    if (sharedOn()) {
+      try { await sbFetch(`?id=eq.${userColleges[idx]._id}`, { method: "DELETE" }); }
+      catch (e2) { alert("Could not delete from shared storage (" + e2.message + ")"); return; }
     }
-    return;
-  }
+    userColleges.splice(idx, 1);
+    if (!sharedOn()) saveUser();
+    openRow = null; render();
+  })();
+}
+function handleEditRemoveClick(e) {
+  const editBtn = e.target.closest("[data-edit]");
+  if (editBtn) { openEditor(Number(editBtn.dataset.edit)); return true; }
+  const removeBtn = e.target.closest("[data-remove]");
+  if (removeBtn) { handleRemove(Number(removeBtn.dataset.remove)); return true; }
+  return false;
+}
+els.addedList.addEventListener("click", handleEditRemoveClick);
+els.tbody.addEventListener("click", e => {
+  if (handleEditRemoveClick(e)) return;
   const tr = e.target.closest("tr.data"); if (!tr) return;
   const i = Number(tr.dataset.i);
   openRow = openRow === i ? null : i;
@@ -1372,10 +1416,10 @@ function updatePreview() {
     <div class="kv"><span class="k">Overall rank</span><span class="v">${r.prank}</span></div>`;
 }
 
-function openModal(idx) {
-  editIndex = idx === undefined ? null : idx;
+function openEditor(idx) {
+  editIndex = idx === undefined || idx === null ? null : idx;
   const c = editIndex === null ? null : userColleges[editIndex];
-  els.modalTitle.textContent = c ? "Edit college" : "Add college";
+  els.formTitle.textContent = c ? `Edit college — ${c.name}` : "Add a college";
   els.saveBtn.textContent = c ? "Save changes" : "Add college";
   els.formError.textContent = "";
   F("f_name").value = c ? c.name : "";
@@ -1393,24 +1437,18 @@ function openModal(idx) {
   F("f_div").value = c && c.div !== null ? c.div : "";
   F("f_cg").value = c ? c.cg : "NA";
   updatePreview();
-  els.overlay.classList.add("open");
+  activeView = "add";
+  render();
   F("f_name").focus();
 }
-function closeModal() { els.overlay.classList.remove("open"); editIndex = null; }
 
-document.getElementById("addBtn").addEventListener("click", () => openModal());
-document.getElementById("cancelBtn").addEventListener("click", closeModal);
-els.overlay.addEventListener("click", e => { if (e.target === els.overlay) closeModal(); });
+document.getElementById("cancelBtn").addEventListener("click", () => openEditor(null));
 const howOverlay = document.getElementById("howOverlay");
 document.getElementById("howBtn").addEventListener("click", () => howOverlay.classList.add("open"));
 document.getElementById("howClose").addEventListener("click", () => howOverlay.classList.remove("open"));
 howOverlay.addEventListener("click", e => { if (e.target === howOverlay) howOverlay.classList.remove("open"); });
-document.addEventListener("keydown", e => {
-  if (e.key !== "Escape") return;
-  if (els.overlay.classList.contains("open")) closeModal();
-  howOverlay.classList.remove("open");
-});
-els.form.addEventListener("input", updatePreview);
+document.addEventListener("keydown", e => { if (e.key === "Escape") howOverlay.classList.remove("open"); });
+els.form.addEventListener("input", () => { els.formError.classList.remove("ok"); els.formError.textContent = ""; updatePreview(); });
 els.form.addEventListener("change", updatePreview);
 els.form.addEventListener("submit", async e => {
   e.preventDefault();
@@ -1438,11 +1476,15 @@ els.form.addEventListener("submit", async e => {
     if (editIndex !== null) userColleges[editIndex] = c; else userColleges.push(c);
     saveUser();
   }
+  const saved = editIndex !== null ? userColleges[editIndex] : userColleges[userColleges.length - 1];
   const newIndex = COLLEGES.length + (editIndex !== null ? editIndex : userColleges.length - 1);
-  closeModal();
-  openRow = newIndex;   // open the breakdown so the recruiter sees the computed result
+  editIndex = null;
+  openRow = newIndex;   // pre-open its breakdown for when the user visits the dashboard
   sortState = null;
-  render();
+  openEditor(null);     // reset the form for the next entry (also re-renders)
+  const r = computeAll(els.eng.checked, els.div.checked, userColleges).find(x => x.raw === saved || x.name === saved.name);
+  els.formError.textContent = `Saved "${saved.name}" — total ${fmt2(r.total)}, overall rank #${r.prank}. See it below or on the Dashboard tab.`;
+  els.formError.classList.add("ok");
 });
 
 els.sync.addEventListener("click", () => { if (sharedOn()) loadShared(); });

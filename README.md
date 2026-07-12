@@ -17,6 +17,13 @@ first college entirely, and used median instead of average salary for one
 row). Everything else — indices, adjusted weights, bonuses, CG priority,
 location resolution, ranking — follows the framework exactly.
 
+The page is organised as a three-step workflow:
+**1 · Add College** (data entry with live auto-computed preview and the list of
+added colleges), **2 · Dashboard** (the report canvas plus every lever —
+bonus toggles, zone chips, salary range, CG filter, search, tier cutoffs and
+the economical threshold), **3 · Catalogue** (the business-ready output that
+reflects everything chosen on the Dashboard tab).
+
 - **Report canvas:** Power BI-style layout — slicer bar, KPI cards, cross-filtering
   visuals (avg score by zone, CG priority donut, top 10 bars) and the ranking
   table as a detail visual. Clicking a bar or donut segment filters the page;
