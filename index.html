@@ -195,6 +195,22 @@
   [hidden] { display: none !important; }
   /* ---- catalogue ---- */
   .cutoffs input[type="number"] { width: 58px; padding: 4px 6px; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; font-size: 12.5px; }
+  .tb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .tb-head .vtitle { margin: 0; }
+  .tb-econ { margin-left: auto; font-size: 12.5px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 5px; }
+  .tb-strip { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; }
+  .tseg {
+    flex: 1 1 150px; min-width: 150px; border-radius: 6px; padding: 6px 10px;
+    border: 1px solid var(--border); border-top: 3px solid var(--bar-track);
+  }
+  .tseg b { display: block; font-size: 12.5px; }
+  .tseg span { font-size: 11.5px; color: var(--text-muted); }
+  .tseg.t1 { border-top-color: var(--accent); }
+  .tseg.t2 { border-top-color: color-mix(in srgb, var(--accent) 65%, var(--bar-track)); }
+  .tseg.t3 { border-top-color: color-mix(in srgb, var(--accent) 35%, var(--bar-track)); }
+  .tbound { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+  .tbound input { width: 54px; padding: 4px 4px; text-align: center; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; font-size: 12.5px; font-weight: 600; }
+  .tbound label { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
   .tiersum { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
   .tiersum .kvalue { font-size: 26px; }
   .matrices { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
@@ -386,16 +402,7 @@
       <button class="clearlink" id="clearBtn" type="button" hidden>Clear filters</button>
       <span class="count" id="count"></span>
     </div>
-    <div class="slicers" style="border-top:1px solid var(--border); margin-top:10px; padding-top:10px">
-      <span class="control cutoffs" title="Tier boundaries on the Total Priority Score — used by the Catalogue tab">
-        <label for="cut1">Catalogue tier cutoffs:&nbsp;&nbsp;Tier 1 ≥</label><input type="number" id="cut1" min="0" max="110" step="1">
-        <label for="cut2">Tier 2 ≥</label><input type="number" id="cut2" min="0" max="110" step="1">
-        <label for="cut3">Tier 3 ≥</label><input type="number" id="cut3" min="0" max="110" step="1">
-        <button class="clearlink" id="cutReset" type="button" hidden>Reset 70/55/40</button>
-      </span>
-      <span class="control" title="Median salary at or below this counts as economical in the Catalogue's value matrix">
-        <label for="econCut">Economical ≤ ₹</label><input type="number" id="econCut" class="salbox" min="0" step="0.5"><span>L</span></span>
-    </div>
+    <div id="tierBand" style="border-top:1px solid var(--border); margin-top:10px; padding-top:10px"></div>
   </div>
 
   <div class="kpis" id="kpis"></div>
@@ -1229,12 +1236,39 @@ function renderAddList(allRows) {
     </div>`).join("");
 }
 
+function tierBandHTML(view) {
+  const { c1, c2, c3 } = cutoffs;
+  const rows = F("hideTest").checked ? view.filter(r => !isTestCollege(r.name)) : view;
+  const n = t => rows.filter(t).length;
+  const seg = (cls, name, meaning, range, count) => `
+    <div class="tseg ${cls}"><b>${name} · ${meaning}</b><span>score ${range} · ${count} college${count === 1 ? "" : "s"}</span></div>`;
+  const bound = (id, val, below, above) => `
+    <div class="tbound"><label for="${id}">boundary</label>
+      <input type="number" id="${id}" min="0" max="110" step="1" value="${val}"
+        title="Colleges scoring ${val} or more move up from ${below} into ${above}"></div>`;
+  const isDefault = c1 === CUT_DEFAULTS.c1 && c2 === CUT_DEFAULTS.c2 && c3 === CUT_DEFAULTS.c3;
+  return `
+    <div class="tb-head">
+      <p class="vtitle">Catalogue tiers <span class="vhint">· set the score boundaries — colleges move between tiers instantly (used on the Catalogue tab)</span></p>
+      ${isDefault ? "" : `<button class="clearlink" id="cutReset" type="button">Reset to 70 / 55 / 40</button>`}
+      <span class="tb-econ" title="Used by the Catalogue's value matrix to spot hidden gems">“Economical” = median salary up to
+        ₹<input type="number" id="econCut" class="salbox" min="0" step="0.5" value="${econCut}">L</span>
+    </div>
+    <div class="tb-strip">
+      ${seg("t4", "Tier 4", "Monitor", `below ${c3}`, n(r => r.total < c3))}
+      ${bound("cut3", c3, "T4", "T3")}
+      ${seg("t3", "Tier 3", "Selective", `${c3} – ${c2}`, n(r => r.total >= c3 && r.total < c2))}
+      ${bound("cut2", c2, "T3", "T2")}
+      ${seg("t2", "Tier 2", "Engage", `${c2} – ${c1}`, n(r => r.total >= c2 && r.total < c1))}
+      ${bound("cut1", c1, "T2", "T1")}
+      ${seg("t1", "Tier 1", "Invest", `${c1} and above`, n(r => r.total >= c1))}
+    </div>`;
+}
+
 function render() {
   buildHead();
-  F("cut1").value = cutoffs.c1; F("cut2").value = cutoffs.c2; F("cut3").value = cutoffs.c3;
-  F("econCut").value = econCut;
-  F("cutReset").hidden = cutoffs.c1 === CUT_DEFAULTS.c1 && cutoffs.c2 === CUT_DEFAULTS.c2 && cutoffs.c3 === CUT_DEFAULTS.c3;
   const { view, forZoneChart, forCgChart } = viewSets();
+  document.getElementById("tierBand").innerHTML = tierBandHTML(view);
   els.count.textContent = `${view.length} of ${COLLEGES.length + userColleges.length} colleges`;
   els.sync.className = "sync" + (sharedOn() ? (sharedError ? " on err" : " on") : "");
   els.sync.textContent = sharedOn()
@@ -1375,12 +1409,17 @@ function applyCutoffs(changed) {
   saveCutoffs();
   render();
 }
-for (const id of ["cut1", "cut2", "cut3"]) F(id).addEventListener("change", () => applyCutoffs(id));
-F("cutReset").addEventListener("click", () => { cutoffs = { ...CUT_DEFAULTS }; saveCutoffs(); render(); });
-F("econCut").addEventListener("change", () => {
-  const v = parseFloat(F("econCut").value);
-  if (isFinite(v) && v > 0) { econCut = v; try { localStorage.setItem(ECON_KEY, String(v)); } catch (e) {} }
-  render();
+const tierBandEl = document.getElementById("tierBand");
+tierBandEl.addEventListener("change", e => {
+  if (["cut1", "cut2", "cut3"].includes(e.target.id)) { applyCutoffs(e.target.id); return; }
+  if (e.target.id === "econCut") {
+    const v = parseFloat(e.target.value);
+    if (isFinite(v) && v > 0) { econCut = v; try { localStorage.setItem(ECON_KEY, String(v)); } catch (err) {} }
+    render();
+  }
+});
+tierBandEl.addEventListener("click", e => {
+  if (e.target.id === "cutReset") { cutoffs = { ...CUT_DEFAULTS }; saveCutoffs(); render(); }
 });
 els.clearBtn.addEventListener("click", () => {
   zoneSet.clear(); els.cg.value = "All"; els.search.value = "";
