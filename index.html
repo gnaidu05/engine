@@ -598,14 +598,21 @@ const STATE_ALIAS = { "tamil nadu":"Tamil Nadu","rajasthan":"Rajasthan","punjab"
   "haryana":"Haryana","maharashtra":"Maharashtra","chattisgarh":"Chhattisgarh",
   "chhattisgarh":"Chhattisgarh","gujarat":"Gujarat","kerala":"Kerala",
   "telanga":"Telangana","telangana":"Telangana","jharkhand":"Jharkhand",
-  "j&k":"Jammu & Kashmir","delhi":"Delhi" };            // scoring!R3:S19
+  "j&k":"Jammu & Kashmir","delhi":"Delhi",
+  "andhra pradesh":"Andhra Pradesh","goa":"Goa","madhya pradesh":"Madhya Pradesh" };            // scoring!R3:S19
 const STATE_ZONE = { "Tamil Nadu":"South","Rajasthan":"North","Punjab":"North","Karnataka":"South",
   "Chandigarh":"North","Uttar Pradesh":"North","Haryana":"North","Maharashtra":"West",
   "Chhattisgarh":"Central","Gujarat":"West","Kerala":"South","Telangana":"South",
-  "Jharkhand":"East","Jammu & Kashmir":"North","Delhi":"North" }; // scoring!U3:V17
+  "Jharkhand":"East","Jammu & Kashmir":"North","Delhi":"North",
+  "Andhra Pradesh":"South","Goa":"West","Madhya Pradesh":"Central" }; // scoring!U3:V17
 const LOC_OVERRIDE = { "new delhi":["New Delhi","Delhi"], "noida":["Noida","Uttar Pradesh"],
   "jaipur":["Jaipur","Rajasthan"], "jodhpur":["Jodhpur","Rajasthan"],
-  "jammu":["Jammu","Jammu & Kashmir"] };               // scoring!X3:Z7
+  "jammu":["Jammu","Jammu & Kashmir"],
+  "kanpur":["Kanpur","Uttar Pradesh"], "lucknow":["Lucknow","Uttar Pradesh"],
+  "madurai":["Madurai","Tamil Nadu"], "coimbatore":["Coimbatore","Tamil Nadu"],
+  "bengaluru":["Bengaluru","Karnataka"], "visakhapatnam":["Visakhapatnam","Andhra Pradesh"],
+  "tirupati":["Tirupati","Andhra Pradesh"], "kasaragod":["Kasaragod","Kerala"],
+  "thrissur":["Thrissur","Kerala"], "goa":["Ponda","Goa"] };               // scoring!X3:Z7
 
 /* ---- Brand Perception calibration & sub-factor weights ---- */
 const BP = { A:132.5, B:14.2, RANK_FILL:250, SAL_FLOOR:400000, SAL_CAP:2000000,
@@ -666,8 +673,10 @@ function resolveLocation(c) {
   else { p1 = raw.trim(); p2 = ""; }
   const e = Object.prototype.hasOwnProperty.call(STATE_ALIAS, p1.toLowerCase());
   const f = Object.prototype.hasOwnProperty.call(STATE_ALIAS, p2.toLowerCase());
+  const ov0 = LOC_OVERRIDE[raw.trim().toLowerCase()];
   let city, state;
-  if (e)      { city = p2; state = STATE_ALIAS[p1.toLowerCase()]; }
+  if (ov0 && p2 === "") { city = ov0[0]; state = ov0[1]; }  // single-token override wins
+  else if (e) { city = p2; state = STATE_ALIAS[p1.toLowerCase()]; }
   else if (f) { city = p1; state = STATE_ALIAS[p2.toLowerCase()]; }
   else {
     const ov = LOC_OVERRIDE[raw.trim().toLowerCase()];
