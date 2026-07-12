@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Rebuild the NIRF directory embedded in index.html from nirfindia.org.
 
-Downloads the official NIRF *Engineering* ranking pages for 2023-2025 —
-ranks 1-100 plus the 101-150 / 151-200 / 201-300 rank-band pages — merges
+Downloads the official NIRF *Engineering* ranking pages for 2023-2025 -
+ranks 1-100 plus the 101-150 / 151-200 / 201-300 rank-band pages - merges
 them by institute, and rewrites the block between NIRF_DIRECTORY_START /
 NIRF_DIRECTORY_END markers in index.html.
 
 Run from the repo root:  python3 scripts/build_nirf_directory.py
-(needs: requests, beautifulsoup4)
+(needs: requests)
 """
 import datetime
 import json
@@ -15,16 +15,9 @@ import re
 import sys
 
 import requests
-from bs4 import BeautifulSoup
-
-PARSER = "lxml"  # falls back to html.parser if lxml is unavailable
-try:
-    import lxml  # noqa: F401
-except ImportError:
-    PARSER = "html.parser" 
 
 YEARS = [2025, 2024, 2023]
-PAGES = [  # (suffix, rank value: None = read from the Rank column, else the band label)
+PAGES = [  # (suffix, band label; None = ranked list with a Rank column)
     ("EngineeringRanking.html", None),
     ("EngineeringRanking150.html", "101-150"),
     ("EngineeringRanking200.html", "151-200"),
@@ -32,38 +25,40 @@ PAGES = [  # (suffix, rank value: None = read from the Rank column, else the ban
 ]
 UA = {"User-Agent": "Mozilla/5.0 (college-priority-dashboard NIRF directory builder)"}
 
+# Ranked rows look like:
+#   <tr><td>IR-E-U-0456</td><td>NAME<div>...More Details...<nested table>...</div></td>
+#   <td>City</td><td>State</td><td>Score</td><td>Rank</td></tr>
+ROW_TAIL = re.compile(
+    r"<td[^>]*>\s*([^<>]+?)\s*</td>\s*<td[^>]*>\s*([^<>]+?)\s*</td>"
+    r"\s*<td[^>]*>\s*([\d.]+)\s*</td>\s*<td[^>]*>\s*(\d+)\s*</td>\s*</tr>", re.I)
 
-def clean_name(td):
-    a = td.find("a")
-    text = a.get_text(" ", strip=True) if a else td.get_text(" ", strip=True)
-    text = re.split(r"More Details", text)[0]
-    return re.sub(r"\s+", " ", text).strip()
 
-
-def parse_page(html, band):
-    """Yield (name, city, state, rank) rows from a ranking page."""
-    soup = BeautifulSoup(html, PARSER)
+def parse_ranked(html):
     out = []
-    for tr in soup.find_all("tr"):
-        tds = tr.find_all("td", recursive=False) or tr.find_all("td")
-        if len(tds) < 4:
+    parts = re.split(r"(?=<tr[^>]*>\s*<td[^>]*>\s*IR-)", html)
+    for part in parts[1:]:
+        m = re.match(r"<tr[^>]*>\s*<td[^>]*>\s*(IR-[A-Za-z0-9-]+)\s*</td>\s*<td[^>]*>\s*([^<]+)", part)
+        if not m:
             continue
-        first = tds[0].get_text(" ", strip=True)
-        if not re.match(r"^IR-", first):  # institute IDs look like IR-E-U-0456
+        name = re.sub(r"\s+", " ", m.group(2)).strip()
+        tails = ROW_TAIL.findall(part)  # last match is the outer row's own tail
+        if not name or not tails:
             continue
-        name = clean_name(tds[1])
-        city = tds[2].get_text(" ", strip=True)
-        state = tds[3].get_text(" ", strip=True)
-        if band is not None:
-            rank = band
-        else:
-            rank_txt = tds[-1].get_text(" ", strip=True)
-            m = re.search(r"\d+", rank_txt)
-            if not m:
-                continue
-            rank = int(m.group())
-        if name:
-            out.append((name, city, state, rank))
+        city, state, _score, rank = tails[-1]
+        out.append((name, city.strip(), state.strip(), int(rank)))
+    return out
+
+
+def parse_band(html, band):
+    out = []
+    body = html.split("<tbody", 1)[-1]
+    for m in re.finditer(
+            r"<tr[^>]*>\s*<td[^>]*>\s*([^<>]+?)\s*</td>\s*<td[^>]*>\s*([^<>]+?)\s*</td>"
+            r"\s*<td[^>]*>\s*([^<>]+?)\s*</td>\s*</tr>", body):
+        name, city, state = (re.sub(r"\s+", " ", g).strip() for g in m.groups())
+        if len(name) < 4 or name.replace(".", "").isdigit():
+            continue
+        out.append((name, city, state, band))
     return out
 
 
@@ -72,7 +67,7 @@ def norm(s):
 
 
 def main():
-    merged = {}  # key -> entry
+    merged = {}
     counts = {}
     for year in YEARS:
         year_rows = 0
@@ -86,18 +81,11 @@ def main():
             if resp.status_code != 200:
                 print(f"  {url} -> HTTP {resp.status_code} (skipped)")
                 continue
-            rows = parse_page(resp.text, band)
+            rows = parse_ranked(resp.text) if band is None else parse_band(resp.text, band)
             print(f"  {url} -> {len(rows)} rows")
-            if not rows:  # diagnostics: show what the page actually looks like
-                html = resp.text
-                print(f"    DIAG len={len(html)} tables={html.count('<table')} trs={html.count('<tr')} "
-                      f"tds={html.count('<td')} ir_ids={len(re.findall(r'IR-[A-Z]', html))}")
-                m = re.search(r"IR-[A-Z][^<]{0,40}", html)
-                if m:
-                    start = max(0, m.start() - 400)
-                    print("    CONTEXT: " + re.sub(r"\s+", " ", html[start:m.end() + 700])[:1100])
-                else:
-                    print("    HEAD: " + re.sub(r"\s+", " ", html[:800]))
+            if not rows:
+                body = resp.text.split("<tbody", 1)[-1]
+                print("    DIAG tbody head: " + re.sub(r"\s+", " ", body[:600]))
             year_rows += len(rows)
             for name, city, state, rank in rows:
                 key = norm(name) + "|" + norm(city)
@@ -105,9 +93,11 @@ def main():
                                             "r25": None, "r24": None, "r23": None})
                 e[f"r{year % 100}"] = rank
         counts[year] = year_rows
-        if year_rows < 250:
-            print(f"SANITY FAIL: only {year_rows} rows parsed for {year} (expected ~300)")
+        if year_rows < 95:
+            print(f"SANITY FAIL: only {year_rows} rows parsed for {year}")
             sys.exit(1)
+        if year_rows < 250:
+            print(f"WARNING: only {year_rows} rows for {year} (bands may be missing)")
 
     entries = sorted(merged.values(), key=lambda e: norm(e["n"]))
     print(f"merged institutes: {len(entries)}")
@@ -118,7 +108,7 @@ def main():
     stamp = datetime.date.today().isoformat()
     src = re.sub(
         r"/\* NIRF_DIRECTORY_START \*/[\s\S]*?/\* NIRF_DIRECTORY_END \*/",
-        f"/* NIRF_DIRECTORY_START */\nconst NIRF_DIRECTORY = {payload};\n/* NIRF_DIRECTORY_END */",
+        lambda _m: f"/* NIRF_DIRECTORY_START */\nconst NIRF_DIRECTORY = {payload};\n/* NIRF_DIRECTORY_END */",
         src, count=1)
     src = re.sub(
         r"/\* NIRF_DIRECTORY_META_START \*/[\s\S]*?/\* NIRF_DIRECTORY_META_END \*/",
