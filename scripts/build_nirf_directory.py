@@ -17,6 +17,12 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 
+PARSER = "lxml"  # falls back to html.parser if lxml is unavailable
+try:
+    import lxml  # noqa: F401
+except ImportError:
+    PARSER = "html.parser" 
+
 YEARS = [2025, 2024, 2023]
 PAGES = [  # (suffix, rank value: None = read from the Rank column, else the band label)
     ("EngineeringRanking.html", None),
@@ -36,10 +42,10 @@ def clean_name(td):
 
 def parse_page(html, band):
     """Yield (name, city, state, rank) rows from a ranking page."""
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, PARSER)
     out = []
     for tr in soup.find_all("tr"):
-        tds = tr.find_all("td", recursive=False)
+        tds = tr.find_all("td", recursive=False) or tr.find_all("td")
         if len(tds) < 4:
             continue
         first = tds[0].get_text(" ", strip=True)
@@ -82,6 +88,16 @@ def main():
                 continue
             rows = parse_page(resp.text, band)
             print(f"  {url} -> {len(rows)} rows")
+            if not rows:  # diagnostics: show what the page actually looks like
+                html = resp.text
+                print(f"    DIAG len={len(html)} tables={html.count('<table')} trs={html.count('<tr')} "
+                      f"tds={html.count('<td')} ir_ids={len(re.findall(r'IR-[A-Z]', html))}")
+                m = re.search(r"IR-[A-Z][^<]{0,40}", html)
+                if m:
+                    start = max(0, m.start() - 400)
+                    print("    CONTEXT: " + re.sub(r"\s+", " ", html[start:m.end() + 700])[:1100])
+                else:
+                    print("    HEAD: " + re.sub(r"\s+", " ", html[:800]))
             year_rows += len(rows)
             for name, city, state, rank in rows:
                 key = norm(name) + "|" + norm(city)
