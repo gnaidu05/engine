@@ -705,8 +705,9 @@ function bpScores(c) {
 /* ---- ranking assembly ----
    `extra` = colleges added through the UI; they join the salary/NBA maxima
    and are scored identically to the base list. */
-function computeAll(engOn, divOn, extra) {
-  const list = extra && extra.length ? COLLEGES.concat(extra) : COLLEGES;
+function computeAll(engOn, divOn, extra, baseList) {
+  const base = baseList || COLLEGES;
+  const list = extra && extra.length ? base.concat(extra) : base;
   const maxMed = Math.max(...list.map(c => isNum(c.med) ? c.med : -Infinity));
   const maxNba = Math.max(...list.map(c => isNum(c.nba) ? c.nba : -Infinity));
   const rows = list.map((c, i) => {
@@ -721,7 +722,7 @@ function computeAll(engOn, divOn, extra) {
     const total = core + (engOn ? engb : 0) + (divOn ? divb : 0);
     return { i, name: c.name, city: loc.city, state: loc.state, zone: loc.zone,
              sal, nirf, naac, nba, bp, cgi, core, engb, divb, total, cg: c.cg, raw: c,
-             added: i >= COLLEGES.length };
+             added: i >= base.length };
   });
   for (const r of rows) { // competition ranking, descending, over all colleges
     r.prank = 1 + rows.filter(o => o.total > r.total).length;
@@ -760,6 +761,18 @@ let sortState = null;        // null = default order; else {key, dir}
 let openRow = null;          // college index of the open breakdown
 let editIndex = null;        // index into userColleges while editing, else null
 const STORE_KEY = "collegeDashboard.addedColleges.v1";
+/* Edits to the 67 baseline colleges are stored as overrides keyed by name
+   (the name itself is locked while editing — it is the identity). */
+const EDITS_KEY = "collegeDashboard.baseEdits.v1";
+let baseEdits = {};
+try { baseEdits = JSON.parse(localStorage.getItem(EDITS_KEY)) || {}; } catch (e) { baseEdits = {}; }
+const saveBaseEdits = () => { try { localStorage.setItem(EDITS_KEY, JSON.stringify(baseEdits)); } catch (e) {} };
+const effectiveBase = () => COLLEGES.map(c => baseEdits[c.name] ? { ...baseEdits[c.name], name: c.name } : c);
+function computeCurrent(extra) {
+  const rows = computeAll(els.eng.checked, els.div.checked, extra, effectiveBase());
+  for (const r of rows) r.edited = !r.added && Object.prototype.hasOwnProperty.call(baseEdits, r.name);
+  return rows;
+}
 let userColleges = [];
 try { userColleges = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { userColleges = []; }
 const saveUser = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(userColleges)); } catch (e) {} };
@@ -850,7 +863,7 @@ function salaryBounds() {
 
 /* ---- filter pipeline (Power BI semantics: a visual is not filtered by its own selection) ---- */
 function viewSets() {
-  const rows = computeAll(els.eng.checked, els.div.checked, userColleges);
+  const rows = computeCurrent(userColleges);
   const ordered = dashSort(rows);
   ordered.forEach((r, k) => r.rank = k + 1);
   const q = els.search.value.trim().toLowerCase();
@@ -1052,10 +1065,13 @@ function detailHTML(r) {
       <div class="kv total"><span class="k">Total Priority Score</span><span class="v">${fmt2(r.total)}</span></div>
       <div class="kv"><span class="k">Overall rank (by total score)</span><span class="v">${r.prank}</span></div>
       <div class="kv"><span class="k">Base Rank (core only)</span><span class="v">${r.brank}</span></div>
-      ${r.added ? `<div class="form-actions" style="margin-top:12px">
-        <button type="button" class="btn" data-edit="${r.i - COLLEGES.length}">Edit</button>
-        <button type="button" class="btn danger" data-remove="${r.i - COLLEGES.length}">Remove</button>
-      </div>` : ""}
+      <div class="form-actions" style="margin-top:12px">
+        ${r.added
+          ? `<button type="button" class="btn" data-edit="${r.i - COLLEGES.length}">Edit</button>
+             <button type="button" class="btn danger" data-remove="${r.i - COLLEGES.length}">Remove</button>`
+          : `<button type="button" class="btn" data-editbase="${esc(r.name)}">Edit</button>
+             ${r.edited ? `<button type="button" class="btn danger" data-resetbase="${esc(r.name)}">Reset to original</button>` : ""}`}
+      </div>
     </div>
   </div>`;
 }
@@ -1108,6 +1124,7 @@ function catCardHTML(r) {
     vintage ? `<span class="tag">${vintage}</span>` : "",
     String(c.div || "").toLowerCase() === "yes" ? `<span class="tag">Diversity focus</span>` : "",
     r.added ? `<span class="chip added">added</span>` : "",
+    r.edited ? `<span class="chip added">edited</span>` : "",
   ].filter(Boolean).join("");
   return `<div class="catcard" data-open="${r.i}">
     <div class="cc-head"><span class="cc-score">${r.total.toFixed(1)}</span>
@@ -1175,21 +1192,25 @@ function renderCatalogue(viewRows) {
 /* ================= render ================= */
 let activeView = "dash";
 function renderAddList(allRows) {
-  const added = allRows.filter(r => r.added);
-  if (!added.length) {
-    els.addedList.innerHTML = `<div class="empty">No colleges added yet — use the form above.</div>`;
+  const touched = allRows.filter(r => r.added || r.edited);
+  if (!touched.length) {
+    els.addedList.innerHTML = `<div class="empty">No colleges added or edited yet — use the form above, or hit Edit on any college in the Dashboard.</div>`;
     return;
   }
-  els.addedList.innerHTML = added.map(r => `
+  els.addedList.innerHTML = touched.map(r => `
     <div class="added-row">
       <div class="ar-main"><b>${esc(r.name)}</b>
+        <span class="chip added">${r.added ? "added" : "edited"}</span>
         <span class="ar-meta">${esc(r.city || "—")}, ${esc(r.state)} · ${esc(r.zone)} zone ·
           <span class="chip ${esc(r.cg)}">${esc(r.cg)}</span></span></div>
       <div class="ar-score">Total <b>${fmt2(r.total)}</b> · overall rank <b>#${r.prank}</b></div>
       <div class="ar-actions">
         <button type="button" class="btn" data-open="${r.i}">View in dashboard</button>
-        <button type="button" class="btn" data-edit="${r.i - COLLEGES.length}">Edit</button>
-        <button type="button" class="btn danger" data-remove="${r.i - COLLEGES.length}">Remove</button>
+        ${r.added
+          ? `<button type="button" class="btn" data-edit="${r.i - COLLEGES.length}">Edit</button>
+             <button type="button" class="btn danger" data-remove="${r.i - COLLEGES.length}">Remove</button>`
+          : `<button type="button" class="btn" data-editbase="${esc(r.name)}">Edit</button>
+             <button type="button" class="btn danger" data-resetbase="${esc(r.name)}">Reset to original</button>`}
       </div>
     </div>`).join("");
 }
@@ -1219,7 +1240,7 @@ function render() {
   document.getElementById("dashView").hidden = activeView !== "dash";
   document.getElementById("catView").hidden = activeView !== "cat";
   for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t.dataset.view === activeView);
-  if (activeView === "add") { renderAddList(dashSort(computeAll(els.eng.checked, els.div.checked, userColleges))); return; }
+  if (activeView === "add") { renderAddList(dashSort(computeCurrent(userColleges))); return; }
   if (activeView === "cat") { renderCatalogue(view); return; }
   els.kpis.innerHTML = kpiHTML(view);
   els.zoneChart.innerHTML = zoneChartHTML(forZoneChart);
@@ -1234,7 +1255,7 @@ function render() {
   els.tbody.innerHTML = rows.map(r => `
     <tr class="data ${openRow === r.i ? "open" : ""}" data-i="${r.i}">
       <td class="num">${r.rank}</td>
-      <td class="college">${esc(r.name)}${r.added ? '<span class="chip added">added</span>' : ""}</td>
+      <td class="college">${esc(r.name)}${r.added ? '<span class="chip added">added</span>' : ""}${r.edited ? '<span class="chip added">edited</span>' : ""}</td>
       <td>${esc(r.city)}</td><td>${esc(r.state)}</td><td>${esc(r.zone)}</td>
       <td><span class="chip ${esc(r.cg)}">${esc(r.cg)}</span></td>
       <td class="num">${fmt2(r.core)}</td>
@@ -1274,6 +1295,14 @@ function handleEditRemoveClick(e) {
   if (editBtn) { openEditor(Number(editBtn.dataset.edit)); return true; }
   const removeBtn = e.target.closest("[data-remove]");
   if (removeBtn) { handleRemove(Number(removeBtn.dataset.remove)); return true; }
+  const baseBtn = e.target.closest("[data-editbase]");
+  if (baseBtn) { openBaseEditor(baseBtn.dataset.editbase); return true; }
+  const resetBtn = e.target.closest("[data-resetbase]");
+  if (resetBtn) {
+    const n = resetBtn.dataset.resetbase;
+    if (confirm(`Reset "${n}" to its original data?`)) { delete baseEdits[n]; saveBaseEdits(); render(); }
+    return true;
+  }
   return false;
 }
 els.addedList.addEventListener("click", handleEditRemoveClick);
@@ -1381,9 +1410,11 @@ function formCollege() {
 
 function validateForm(c) {
   if (!c.name) return "College name is required.";
-  const clash = COLLEGES.some(x => x.name.toLowerCase() === c.name.toLowerCase()) ||
-    userColleges.some((x, j) => j !== editIndex && x.name.toLowerCase() === c.name.toLowerCase());
-  if (clash) return "A college with this exact name already exists — names must be unique.";
+  if (editBaseName === null) {
+    const clash = COLLEGES.some(x => x.name.toLowerCase() === c.name.toLowerCase()) ||
+      userColleges.some((x, j) => j !== editIndex && x.name.toLowerCase() === c.name.toLowerCase());
+    if (clash) return "A college with this exact name already exists — names must be unique.";
+  }
   if (!c.loc) return "Location is required (it drives city, state and zone).";
   return "";
 }
@@ -1394,10 +1425,12 @@ function updatePreview() {
   els.locPreview.textContent = c.loc
     ? `→ City: ${loc.city || "—"} · State: ${loc.state} · Zone: ${loc.zone}`
     : "";
-  const candidate = { ...c, name: c.name || "(new college)" };
-  const extra = userColleges.slice();
-  if (editIndex !== null) extra[editIndex] = candidate; else extra.push(candidate);
-  const rows = computeAll(els.eng.checked, els.div.checked, extra);
+  const candidate = { ...c, name: editBaseName ?? (c.name || "(new college)") };
+  let base = effectiveBase(), extra = userColleges.slice();
+  if (editBaseName !== null) base = base.map(x => x.name === editBaseName ? candidate : x);
+  else if (editIndex !== null) extra[editIndex] = candidate;
+  else extra.push(candidate);
+  const rows = computeAll(els.eng.checked, els.div.checked, extra, base);
   const r = rows.find(x => x.raw === candidate);
   const ordered = dashSort(rows);
   const dashRank = ordered.indexOf(r) + 1;
@@ -1416,12 +1449,25 @@ function updatePreview() {
     <div class="kv"><span class="k">Overall rank</span><span class="v">${r.prank}</span></div>`;
 }
 
+let editBaseName = null;   // name of the baseline college being edited, else null
 function openEditor(idx) {
   editIndex = idx === undefined || idx === null ? null : idx;
+  editBaseName = null;
   const c = editIndex === null ? null : userColleges[editIndex];
+  fillForm(c, false);
+}
+function openBaseEditor(name) {
+  editIndex = null;
+  editBaseName = name;
+  const c = baseEdits[name] || COLLEGES.find(x => x.name === name);
+  fillForm(c, true);
+}
+function fillForm(c, lockName) {
   els.formTitle.textContent = c ? `Edit college — ${c.name}` : "Add a college";
   els.saveBtn.textContent = c ? "Save changes" : "Add college";
-  els.formError.textContent = "";
+  F("f_name").disabled = lockName;
+  els.formError.classList.remove("ok");
+  els.formError.textContent = lockName ? "Editing a baseline college — the name is fixed; everything else can change." : "";
   F("f_name").value = c ? c.name : "";
   F("f_loc").value = c ? c.loc : "";
   F("f_type").value = c && c.type ? c.type : "";
@@ -1453,8 +1499,21 @@ els.form.addEventListener("change", updatePreview);
 els.form.addEventListener("submit", async e => {
   e.preventDefault();
   const c = formCollege();
+  if (editBaseName !== null) c.name = editBaseName;
   const err = validateForm(c);
-  if (err) { els.formError.textContent = err; return; }
+  if (err) { els.formError.textContent = err; els.formError.classList.remove("ok"); return; }
+  if (editBaseName !== null) {
+    // baseline-college edit: stored as a local override, not in shared storage
+    baseEdits[editBaseName] = c;
+    saveBaseEdits();
+    const name = editBaseName;
+    editBaseName = null;
+    openEditor(null);
+    const r = computeCurrent(userColleges).find(x => x.name === name);
+    els.formError.textContent = `Saved changes to "${name}" — total ${fmt2(r.total)}, overall rank #${r.prank}.`;
+    els.formError.classList.add("ok");
+    return;
+  }
   if (sharedOn()) {
     els.saveBtn.disabled = true;
     try {
@@ -1482,7 +1541,7 @@ els.form.addEventListener("submit", async e => {
   openRow = newIndex;   // pre-open its breakdown for when the user visits the dashboard
   sortState = null;
   openEditor(null);     // reset the form for the next entry (also re-renders)
-  const r = computeAll(els.eng.checked, els.div.checked, userColleges).find(x => x.raw === saved || x.name === saved.name);
+  const r = computeCurrent(userColleges).find(x => x.raw === saved || x.name === saved.name);
   els.formError.textContent = `Saved "${saved.name}" — total ${fmt2(r.total)}, overall rank #${r.prank}. See it below or on the Dashboard tab.`;
   els.formError.classList.add("ok");
 });

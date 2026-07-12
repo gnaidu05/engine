@@ -53,6 +53,13 @@ reflects everything chosen on the Dashboard tab).
   sheet (including the salary/NBA maxima rescaling). Added colleges can be
   edited or removed. By default they persist per-browser via localStorage;
   see below to share them across the whole team.
+- **Edit existing colleges:** every baseline college has an Edit button in its
+  breakdown (and appears in the Add College tab's list once touched). Edits
+  are stored as per-browser overrides keyed by the college name (the name
+  itself is locked — it is the identity); a "Reset to original" button undoes
+  the override. Edited colleges are badged and re-scored live, including the
+  salary/NBA maxima rescaling. Note: baseline edits stay in the browser even
+  when Supabase sharing is configured (only additions sync).
 
 ## Team-shared additions (Supabase)
 
