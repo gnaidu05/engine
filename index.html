@@ -498,6 +498,11 @@
       engagement get the biggest boost (+10), because that's where extra effort pays off most.
       Medium engagement gets +5, already-high engagement +2.<br>
       🌈 <b>Diversity bonus</b> — +5 for campuses with a strong diversity profile.</p>
+      <div class="kv"><span class="k">💼 Proposed salary-grade ladder (reference only — does not affect the score)</span></div>
+      <p class="note">A3 ₹3.25L · A4 ₹4.25L · A4_Premium ₹5.75L · A5 ₹7.5L · B1 ₹10L + ₹1L joining bonus ·
+      B2 ₹12L + ₹1.5L · C1 ₹15L + ₹1.5L · C1_Premium ₹18L + ₹2L.
+      Each college is tagged with the grade nearest to its median salary — e.g. a ₹7.5L median reads as
+      grade A5, a ₹12L median as B2 — so salary conversations can happen in grade language.</p>
       <p><b>Core Score + bonuses = Total Priority Score.</b> "Overall Rank" simply orders every
       college by that total. The main list additionally keeps our P1 colleges first, then P2,
       then the rest — so the business's priorities always lead the page.</p>
@@ -1117,6 +1122,7 @@ function detailHTML(r) {
       <div class="kv"><span class="k">Type</span><span class="v">${esc(c.type || "—")}</span></div>
       <div class="kv"><span class="k">Established</span><span class="v">${c.year ?? "—"}</span></div>
       <div class="kv"><span class="k">Median / Average salary</span><span class="v">${inr(c.med)} / ${inr(c.avg)}</span></div>
+      <div class="kv"><span class="k">Nearest salary grade (proposed ladder)</span><span class="v">${esc(gradeLabel(salaryGrade(c.med)))}</span></div>
       <div class="kv"><span class="k">Engagement status</span><span class="v">${esc(c.eng ?? "—")}</span></div>
       <div class="kv"><span class="k">Diversity</span><span class="v">${esc(c.div ?? "—")}</span></div>
       <div class="kv"><span class="k">CG Priority</span><span class="v">${esc(c.cg)} → index ${r.cgi}</span></div>
@@ -1183,6 +1189,27 @@ function tiersFor({ c1, c2, c3 }) {
 const isTestCollege = n => /^test college/i.test(n.trim());
 const isEngaged = r => ["medium", "high"].includes(String(r.raw.eng || "").toLowerCase());
 const lakh = v => typeof v === "number" ? "₹" + (v / 100000).toFixed(1).replace(/\.0$/, "") + "L" : "—";
+
+/* Proposed salary-grade ladder (business proposal for the In-Demand channel):
+   grade -> median CTC in LPA (+ joining bonus in lakhs where offered). A
+   college is tagged with the grade whose ladder median is nearest to its own
+   median salary. Reference only — grades never affect the score. */
+const GRADE_LADDER = [
+  { g: "A3", lpa: 3.25 }, { g: "A4", lpa: 4.25 }, { g: "A4_Premium", lpa: 5.75 },
+  { g: "A5", lpa: 7.5 },  { g: "B1", lpa: 10, jb: 1 }, { g: "B2", lpa: 12, jb: 1.5 },
+  { g: "C1", lpa: 15, jb: 1.5 }, { g: "C1_Premium", lpa: 18, jb: 2 },
+];
+function salaryGrade(med) {
+  if (typeof med !== "number") return null;
+  const lpa = med / 100000;
+  let best = null;
+  for (const x of GRADE_LADDER) {
+    const d = Math.abs(x.lpa - lpa);
+    if (!best || d < best.d) best = { ...x, d };
+  }
+  return best;
+}
+const gradeLabel = x => x ? `${x.g} (₹${x.lpa}L${x.jb ? ` + ₹${x.jb}L JB` : ""})` : "—";
 const shortName = n => n.split(",")[0].trim();
 
 function quadHTML(title, sub, list, hot) {
@@ -1202,7 +1229,7 @@ function catCardHTML(r) {
   const tags = [
     `<span class="chip ${esc(r.cg)}">${esc(r.cg)}</span>`,
     c.eng ? `<span class="tag${String(c.eng).toLowerCase() === "low" ? " warn" : ""}">${esc(c.eng)} engagement</span>` : `<span class="tag">no engagement data</span>`,
-    `<span class="tag">${lakh(c.med)} median</span>`,
+    `<span class="tag" title="Nearest proposed salary grade: ${esc(gradeLabel(salaryGrade(c.med)))}">${lakh(c.med)} median${salaryGrade(c.med) ? " · " + esc(salaryGrade(c.med).g) : ""}</span>`,
     `<span class="tag">NIRF'25: ${esc(c.nirf25 ?? "—")}</span>`,
     c.naac && c.naac !== "-" && c.naac !== "N/A" && c.naac !== 0 ? `<span class="tag">NAAC ${esc(c.naac)}</span>` : "",
     vintage ? `<span class="tag">${vintage}</span>` : "",
