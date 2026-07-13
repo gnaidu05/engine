@@ -1622,7 +1622,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") howOverlay.c
 function renderNirfSuggestions() {
   const box = F("nirfSuggest");
   const name = editBaseName ?? F("f_name").value;
-  const matches = nirfMatches(name);
+  const exact = NIRF_DIRECTORY.some(d => nirfNorm(d.n) === nirfNorm(name));
+  const matches = exact ? [] : nirfMatches(name);
   if (!matches.length) { box.hidden = true; box.innerHTML = ""; return; }
   const fmtR = v => v === null || v === undefined ? "—" : v;
   box.hidden = false;
@@ -1638,8 +1639,13 @@ function applyNirfEntry(m, setName) {
   F("f_n25").value = m.r25 ?? "-";
   F("f_n24").value = m.r24 ?? "-";
   F("f_n23").value = m.r23 ?? "-";
-  if (m.c && m.s && !F("f_loc").value.trim()) F("f_loc").value = `${m.c}, ${m.s}`;
-  renderNirfSuggestions();
+  // fill the location unless the user typed a custom one (a value matching a
+  // directory "City, State" was auto-filled, so switching names may update it)
+  const loc = F("f_loc").value.trim().toLowerCase();
+  const wasAuto = !loc || NIRF_DIRECTORY.some(d => `${d.c}, ${d.s}`.toLowerCase() === loc);
+  if (m.c && m.s && wasAuto) F("f_loc").value = `${m.c}, ${m.s}`;
+  F("nirfSuggest").hidden = true;
+  F("nirfSuggest").innerHTML = "";
   updatePreview();
 }
 F("nirfSuggest").addEventListener("click", e => {
@@ -1656,12 +1662,7 @@ els.form.addEventListener("input", e => {
   els.formError.classList.remove("ok"); els.formError.textContent = "";
   if (e.target && e.target.id === "f_name") {
     const exact = NIRF_DIRECTORY.find(d => nirfNorm(d.n) === nirfNorm(F("f_name").value));
-    // selecting a datalist option (or typing the full official name) fills the
-    // rank fields automatically — but never overwrites ranks already entered
-    if (exact && !F("f_n25").value && !F("f_n24").value && !F("f_n23").value) {
-      applyNirfEntry(exact, false);
-      return;
-    }
+    if (exact) { applyNirfEntry(exact, false); return; }  // picked from the list -> just fill
     renderNirfSuggestions();
   }
   updatePreview();
