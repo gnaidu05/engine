@@ -299,6 +299,12 @@
   .how-body p { margin: 10px 0 0; font-size: 13px; }
   .how-body .kv { margin-top: 12px; padding: 0; }
   .how-body .note { margin: 2px 0 0; }
+  .dup-warn { flex-direction: row !important; flex-wrap: wrap; align-items: center; gap: 8px;
+    border: 1px solid #d9b464; background: color-mix(in srgb, #eda100 12%, var(--surface-1));
+    border-radius: 6px; padding: 8px 10px; font-size: 12.5px; }
+  .dup-warn.hard { border-color: #b3261e; background: color-mix(in srgb, #e34948 10%, var(--surface-1)); }
+  .dup-warn .dw-text b { font-variant-numeric: tabular-nums; }
+  .dup-warn .btn { padding: 3px 9px; font-size: 12px; }
   .nirf-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .nirf-chips .nlabel { font-size: 11.5px; color: var(--text-muted); }
   .nirf-chip {
@@ -344,6 +350,7 @@
           <input id="f_name" required list="nirfNames" autocomplete="off"
             placeholder="start typing — official NIRF institutes appear as suggestions">
           <datalist id="nirfNames"></datalist></div>
+        <div class="field wide dup-warn" id="dupWarn" hidden></div>
         <div class="field wide"><label for="f_loc">Location *</label>
           <input id="f_loc" placeholder='e.g. "Mysuru, Karnataka" or "Karnataka, Mysuru"'>
           <span class="sub-hint" id="locPreview"></span></div>
@@ -1608,6 +1615,7 @@ function fillForm(c, lockName) {
   F("f_cg").value = c ? c.cg : "NA";
   updatePreview();
   renderNirfSuggestions();
+  renderDupWarn();
   activeView = "add";
   render();
   F("f_name").focus();
@@ -1619,6 +1627,46 @@ document.getElementById("howBtn").addEventListener("click", () => howOverlay.cla
 document.getElementById("howClose").addEventListener("click", () => howOverlay.classList.remove("open"));
 howOverlay.addEventListener("click", e => { if (e.target === howOverlay) howOverlay.classList.remove("open"); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") howOverlay.classList.remove("open"); });
+/* Live duplicate check: highlight when the typed name is (or looks like)
+   a college already in the list, before the user hits Save. */
+function existingCollegeMatches(query) {
+  const q = nirfNorm(query);
+  const res = { exact: [], similar: [] };
+  if (q.length < 4) return res;
+  const qT = q.split(" ").filter(t => t.length > 1);
+  for (const r of computeCurrent(userColleges)) {
+    if (editIndex !== null && r.added && r.i - COLLEGES.length === editIndex) continue;
+    if (editBaseName !== null && r.name === editBaseName) continue;
+    const hay = nirfNorm(r.name);
+    if (hay === q) { res.exact.push(r); continue; }
+    let hit = 0;
+    for (const t of qT) if (hay.includes(t)) hit++;
+    if (qT.length > 1 && hit / qT.length >= 0.75) res.similar.push(r);
+  }
+  res.similar = res.similar.slice(0, 2);
+  return res;
+}
+
+function renderDupWarn() {
+  const box = F("dupWarn");
+  const { exact, similar } = existingCollegeMatches(F("f_name").value);
+  const hard = exact.length > 0;
+  const hits = hard ? exact : similar;
+  F("saveBtn").disabled = hard && editIndex === null && editBaseName === null;
+  if (!hits.length) { box.hidden = true; box.innerHTML = ""; box.classList.remove("hard"); return; }
+  box.hidden = false;
+  box.classList.toggle("hard", hard);
+  box.innerHTML = hits.map(r => `
+    <span class="dw-text">${hard ? "⚠ Already in the list:" : "⚠ Similar college already in the list:"}
+      <b>${esc(r.name)}</b> — total ${fmt2(r.total)}, rank #${r.prank}</span>
+    <button type="button" class="btn" data-open="${r.i}">View</button>
+    <button type="button" class="btn" ${r.added
+      ? `data-edit="${r.i - COLLEGES.length}"` : `data-editbase="${esc(r.name)}"`}>Edit instead</button>`
+  ).join("<span style='flex-basis:100%'></span>") +
+    (hard ? "" : `<span class="dw-text" style="color:var(--text-muted)">— different college? just continue.</span>`);
+}
+F("dupWarn").addEventListener("click", handleEditRemoveClick);
+
 function renderNirfSuggestions() {
   const box = F("nirfSuggest");
   const name = editBaseName ?? F("f_name").value;
@@ -1646,6 +1694,7 @@ function applyNirfEntry(m, setName) {
   if (m.c && m.s && wasAuto) F("f_loc").value = `${m.c}, ${m.s}`;
   F("nirfSuggest").hidden = true;
   F("nirfSuggest").innerHTML = "";
+  renderDupWarn();
   updatePreview();
 }
 F("nirfSuggest").addEventListener("click", e => {
@@ -1664,6 +1713,7 @@ els.form.addEventListener("input", e => {
     const exact = NIRF_DIRECTORY.find(d => nirfNorm(d.n) === nirfNorm(F("f_name").value));
     if (exact) { applyNirfEntry(exact, false); return; }  // picked from the list -> just fill
     renderNirfSuggestions();
+    renderDupWarn();
   }
   updatePreview();
 });
