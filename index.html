@@ -341,7 +341,9 @@
       <form id="addForm" class="formgrid" novalidate>
       <div class="fields">
         <div class="field wide"><label for="f_name">College name *</label>
-          <input id="f_name" required placeholder="e.g. National Institute of Engineering, Mysuru"></div>
+          <input id="f_name" required list="nirfNames" autocomplete="off"
+            placeholder="start typing — official NIRF institutes appear as suggestions">
+          <datalist id="nirfNames"></datalist></div>
         <div class="field wide"><label for="f_loc">Location *</label>
           <input id="f_loc" placeholder='e.g. "Mysuru, Karnataka" or "Karnataka, Mysuru"'>
           <span class="sub-hint" id="locPreview"></span></div>
@@ -1631,19 +1633,37 @@ function renderNirfSuggestions() {
     `</div>`;
   box._matches = matches;
 }
-F("nirfSuggest").addEventListener("click", e => {
-  const chip = e.target.closest("[data-nirf]");
-  if (!chip) return;
-  const m = F("nirfSuggest")._matches[Number(chip.dataset.nirf)];
+function applyNirfEntry(m, setName) {
+  if (setName && editBaseName === null) F("f_name").value = m.n;
   F("f_n25").value = m.r25 ?? "-";
   F("f_n24").value = m.r24 ?? "-";
   F("f_n23").value = m.r23 ?? "-";
   if (m.c && m.s && !F("f_loc").value.trim()) F("f_loc").value = `${m.c}, ${m.s}`;
+  renderNirfSuggestions();
   updatePreview();
+}
+F("nirfSuggest").addEventListener("click", e => {
+  const chip = e.target.closest("[data-nirf]");
+  if (!chip) return;
+  applyNirfEntry(F("nirfSuggest")._matches[Number(chip.dataset.nirf)], true);
 });
+// populate the name field's native autocomplete with the official institute names
+(() => {
+  const dl = F("nirfNames");
+  dl.innerHTML = NIRF_DIRECTORY.map(e => `<option value="${esc(e.n)}">`).join("");
+})();
 els.form.addEventListener("input", e => {
   els.formError.classList.remove("ok"); els.formError.textContent = "";
-  if (e.target && e.target.id === "f_name") renderNirfSuggestions();
+  if (e.target && e.target.id === "f_name") {
+    const exact = NIRF_DIRECTORY.find(d => nirfNorm(d.n) === nirfNorm(F("f_name").value));
+    // selecting a datalist option (or typing the full official name) fills the
+    // rank fields automatically — but never overwrites ranks already entered
+    if (exact && !F("f_n25").value && !F("f_n24").value && !F("f_n23").value) {
+      applyNirfEntry(exact, false);
+      return;
+    }
+    renderNirfSuggestions();
+  }
   updatePreview();
 });
 F("dirSearch").addEventListener("input", render);
