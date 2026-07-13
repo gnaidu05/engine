@@ -607,12 +607,24 @@ const STATE_ALIAS = { "tamil nadu":"Tamil Nadu","rajasthan":"Rajasthan","punjab"
   "chhattisgarh":"Chhattisgarh","gujarat":"Gujarat","kerala":"Kerala",
   "telanga":"Telangana","telangana":"Telangana","jharkhand":"Jharkhand",
   "j&k":"Jammu & Kashmir","delhi":"Delhi",
-  "andhra pradesh":"Andhra Pradesh","goa":"Goa","madhya pradesh":"Madhya Pradesh" };            // scoring!R3:S19
+  "andhra pradesh":"Andhra Pradesh","goa":"Goa","madhya pradesh":"Madhya Pradesh",
+  "himachal pradesh":"Himachal Pradesh","uttarakhand":"Uttarakhand","ladakh":"Ladakh",
+  "bihar":"Bihar","west bengal":"West Bengal","odisha":"Odisha","orissa":"Odisha",
+  "sikkim":"Sikkim","assam":"Assam","meghalaya":"Meghalaya","manipur":"Manipur",
+  "mizoram":"Mizoram","nagaland":"Nagaland","tripura":"Tripura",
+  "arunachal pradesh":"Arunachal Pradesh","puducherry":"Puducherry",
+  "pondicherry":"Puducherry","andaman and nicobar islands":"Andaman & Nicobar" };            // scoring!R3:S19
 const STATE_ZONE = { "Tamil Nadu":"South","Rajasthan":"North","Punjab":"North","Karnataka":"South",
   "Chandigarh":"North","Uttar Pradesh":"North","Haryana":"North","Maharashtra":"West",
   "Chhattisgarh":"Central","Gujarat":"West","Kerala":"South","Telangana":"South",
   "Jharkhand":"East","Jammu & Kashmir":"North","Delhi":"North",
-  "Andhra Pradesh":"South","Goa":"West","Madhya Pradesh":"Central" }; // scoring!U3:V17
+  "Andhra Pradesh":"South","Goa":"West","Madhya Pradesh":"Central",
+  "Himachal Pradesh":"North","Uttarakhand":"Central","Ladakh":"North",
+  "Bihar":"East","West Bengal":"East","Odisha":"East",
+  "Sikkim":"North East","Assam":"North East","Meghalaya":"North East",
+  "Manipur":"North East","Mizoram":"North East","Nagaland":"North East",
+  "Tripura":"North East","Arunachal Pradesh":"North East",
+  "Puducherry":"South","Andaman & Nicobar":"South" }; // scoring!U3:V17
 const LOC_OVERRIDE = { "new delhi":["New Delhi","Delhi"], "noida":["Noida","Uttar Pradesh"],
   "jaipur":["Jaipur","Rajasthan"], "jodhpur":["Jodhpur","Rajasthan"],
   "jammu":["Jammu","Jammu & Kashmir"],
@@ -1612,9 +1624,9 @@ function renderNirfSuggestions() {
   if (!matches.length) { box.hidden = true; box.innerHTML = ""; return; }
   const fmtR = v => v === null || v === undefined ? "—" : v;
   box.hidden = false;
-  box.innerHTML = `<div class="nirf-chips"><span class="nlabel">NIRF engineering rankings — click to fill:</span>` +
+  box.innerHTML = `<div class="nirf-chips"><span class="nlabel">NIRF engineering rankings — click to fill location & ranks:</span>` +
     matches.map((e, i) => `<button type="button" class="nirf-chip" data-nirf="${i}"
-      title="${esc(e.n)} (${esc(e.c || "")}) — fills 2025/2024/2023">
+      title="${esc(e.n)} — fills location (${esc(e.c || "")}, ${esc(e.s || "")}) and the 2025/2024/2023 ranks">
       ${esc(e.n.length > 44 ? e.n.slice(0, 43) + "…" : e.n)} <b>'25: ${fmtR(e.r25)} · '24: ${fmtR(e.r24)} · '23: ${fmtR(e.r23)}</b></button>`).join("") +
     `</div>`;
   box._matches = matches;
@@ -1626,6 +1638,7 @@ F("nirfSuggest").addEventListener("click", e => {
   F("f_n25").value = m.r25 ?? "-";
   F("f_n24").value = m.r24 ?? "-";
   F("f_n23").value = m.r23 ?? "-";
+  if (m.c && m.s && !F("f_loc").value.trim()) F("f_loc").value = `${m.c}, ${m.s}`;
   updatePreview();
 });
 els.form.addEventListener("input", e => {
